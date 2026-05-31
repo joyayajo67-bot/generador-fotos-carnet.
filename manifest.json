@@ -1,0 +1,24 @@
+{
+  "name": "Generador de Fotos Carnet IA",
+  "short_name": "Fotos Carnet",
+  "description": "Alinea, ajusta el encuadre y exporta tus fotografías en tamaño carnet oficial de forma inmediata y 100% offline.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0910",
+  "theme_color": "#0a0910",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

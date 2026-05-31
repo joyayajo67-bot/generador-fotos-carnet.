@@ -1,0 +1,17 @@
+URL PARA ACCEDER EN EL TELÉFONO:
+--------------------------------
+http://192.168.0.105:8080
+
+
+INSTRUCCIONES PARA LA CÁMARA E INSTALACIÓN PWA (Android Chrome):
+----------------------------------------------------------------
+1. Abre Google Chrome en tu teléfono.
+2. Escribe y entra a la siguiente dirección en la barra de búsqueda:
+   chrome://flags/#unsafely-treat-insecure-origin-as-secure
+
+3. En el cuadro de texto que aparece, escribe la dirección IP de la PC:
+   http://192.168.0.105:8080
+
+4. Cambia la opción de "Disabled" a "Enabled" en el botón de la derecha.
+5. Presiona el botón azul "Relaunch" que aparece al pie de la pantalla para reiniciar Chrome.
+6. ¡Listo! Vuelve a entrar a http://192.168.0.105:8080 y tendrás cámara e instalación activa.
