@@ -22,7 +22,10 @@ const btnWebcamAccept = document.getElementById('btnWebcamAccept');
 const btnWebcamRetry = document.getElementById('btnWebcamRetry');
 const btnWebcamTorch = document.getElementById('btnWebcamTorch');
 
-
+// Welcome & Presentation Screen DOM Elements
+const welcomeScreen = document.getElementById('welcomeScreen');
+const btnBackToWelcome = document.getElementById('btnBackToWelcome');
+const appContainer = document.querySelector('.app-container');
 
 // Leveling Bubble DOM Elements
 const levelingOverlay = document.getElementById('levelingOverlay');
@@ -200,6 +203,50 @@ btnWebcamCancel.addEventListener('click', (e) => {
 btnWebcamTorch.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleTorch();
+});
+
+// Welcome Screen Format Selection click handlers
+const welcomePresetItems = document.querySelectorAll('.welcome-preset-item');
+welcomePresetItems.forEach(item => {
+    item.addEventListener('click', () => {
+        const presetName = item.getAttribute('data-preset');
+        
+        // Find corresponding preset-card button in main UI and activate it
+        const targetBtn = document.querySelector(`.preset-card[data-preset="${presetName}"]`);
+        if (targetBtn) {
+            presetButtons.forEach(btn => btn.classList.remove('active'));
+            targetBtn.classList.add('active');
+            activePreset = presetName;
+            
+            // Re-render and configure canvas dimensions
+            updateCanvasDimensions();
+            
+            // Smoothly fade out the welcome screen and show main app
+            welcomeScreen.classList.add('fade-out');
+            appContainer.style.display = 'flex';
+            
+            setTimeout(() => {
+                welcomeScreen.style.display = 'none';
+            }, 500); // match transition duration
+        }
+    });
+});
+
+// Back to Welcome Screen handler
+btnBackToWelcome.addEventListener('click', (e) => {
+    e.stopPropagation();
+    
+    // Stop any active camera streams for security
+    stopWebcam();
+    
+    // Smoothly show welcome screen
+    welcomeScreen.style.display = 'flex';
+    setTimeout(() => {
+        welcomeScreen.classList.remove('fade-out');
+    }, 10);
+    
+    // Hide main app editor
+    appContainer.style.display = 'none';
 });
 
 fileInput.addEventListener('change', handleFileSelect);
@@ -1971,7 +2018,13 @@ function stopWebcam() {
 }
 
 // Cycle Camera Facing Mode (Frontal selfie <-> Trasera principal)
-function switchCamera() {
+async function switchCamera() {
+    // Stop the active stream to trigger hardware release
+    stopWebcam();
+    
+    // Brief 350ms delay to let mobile OS release the camera device
+    await new Promise(resolve => setTimeout(resolve, 350));
+    
     currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
     startWebcam();
 }
