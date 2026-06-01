@@ -2181,63 +2181,67 @@ body {
 
     .app-header {
         flex-shrink: 0;
-        padding: 10px 15px;
-        margin-bottom: 0;
-        border-bottom: 1px solid var(--border-glass);
+        padding: 10px 15px !important;
+        margin-bottom: 10px !important;
+        border-bottom: 1px solid var(--border-glass) !important;
     }
 
     .app-header h1 {
-        font-size: 1.1rem;
+        font-size: 1.1rem !important;
     }
     .app-header p {
-        display: none;
+        display: none !important;
     }
 
     .workspace {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        gap: 0;
-        padding: 0;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: visible !important;
+        gap: 20px !important;
+        padding: 0 !important;
+        width: 100% !important;
     }
 
-    /* Fixed Top Editor Section */
+    /* Fixed/Sticky Top Editor Section */
     .editor-section {
-        flex-shrink: 0;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background: var(--bg-dark);
-        padding: 10px 15px;
-        border-bottom: 1px solid var(--border-glass);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 1000 !important;
+        background: #0a0910 !important; /* Solid background to prevent overlap transparency */
+        padding: 10px 0 !important;
+        border-bottom: 2px solid var(--border-glass) !important;
+        width: 100% !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .canvas-card {
-        padding: 0;
-        background: transparent;
-        border: none;
-        box-shadow: none;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
-    /* Scrollable Bottom Controls Section */
+    /* Controls Section scrolls naturally underneath the sticky top */
     .controls-section {
-        flex: 1;
-        overflow-y: auto;
-        padding: 15px;
-        -webkit-overflow-scrolling: touch;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+        width: 100% !important;
+        overflow: visible !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+        padding: 10px 5px 80px 5px !important; /* Extra bottom padding for easy mobile scrolling */
     }
 
     .control-card {
-        margin-bottom: 0;
+        background: rgba(22, 20, 38, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid var(--border-glass) !important;
+        border-radius: 20px !important;
+        padding: 20px 15px !important;
+        margin-bottom: 0 !important;
     }
     
     .app-footer-credit {
-        display: none; /* Hide in mobile view to maximize space */
+        display: none !important; /* Hide in mobile view to maximize space */
     }
 }
 
