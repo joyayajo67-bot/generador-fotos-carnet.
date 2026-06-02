@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
     <div class="bg-glow"></div>
@@ -84,6 +84,14 @@
             <!-- Left: Editor Canvas Area -->
             <section class="editor-section">
                 <div class="canvas-card">
+                    <!-- Mobile Top Quick Bar (Visible only on mobile to save vertical space) -->
+                    <div class="mobile-top-bar" id="mobileTopBar">
+                        <span class="mobile-logo-text"><i class="fa-solid fa-wand-magic-sparkles" style="font-size: 0.8rem; color: var(--primary-hover); margin-right: 4px;"></i> Fotos Carnet <span class="gradient-text">IA</span></span>
+                        <button id="btnBackToWelcomeMobile" class="btn-back-welcome-mobile" type="button">
+                            <i class="fa-solid fa-chevron-left"></i> Cambiar Formato
+                        </button>
+                    </div>
+
                     <!-- Frente / Reverso Tab Switcher (Visible only for Cédula preset) -->
                     <div class="cedula-tabs-container" id="cedulaTabsContainer" style="display: none;">
                         <button class="cedula-tab active" id="tabFrente" type="button">
@@ -511,11 +519,11 @@
 
         <!-- Footer -->
         <footer class="app-footer-credit">
-            <p>Generador de Fotos Carnet IA &bull; Desarrollado para Xiphias Consulting &bull; Licencia Joya &bull; <span style="color: var(--primary-hover); font-weight: bold;">v9.0</span></p>
+            <p>Generador de Fotos Carnet IA &bull; Desarrollado para Xiphias Consulting &bull; Licencia Joya &bull; <span style="color: var(--primary-hover); font-weight: bold;">v10.0</span></p>
         </footer>
     </div>
     
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
     <script>
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {

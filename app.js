@@ -25,6 +25,7 @@ const btnWebcamTorch = document.getElementById('btnWebcamTorch');
 // Welcome & Presentation Screen DOM Elements
 const welcomeScreen = document.getElementById('welcomeScreen');
 const btnBackToWelcome = document.getElementById('btnBackToWelcome');
+const btnBackToWelcomeMobile = document.getElementById('btnBackToWelcomeMobile');
 const appContainer = document.querySelector('.app-container');
 
 // Leveling Bubble DOM Elements
@@ -234,6 +235,23 @@ welcomePresetItems.forEach(item => {
 
 // Back to Welcome Screen handler
 btnBackToWelcome.addEventListener('click', (e) => {
+    e.stopPropagation();
+    
+    // Stop any active camera streams for security
+    stopWebcam();
+    
+    // Smoothly show welcome screen
+    welcomeScreen.style.display = 'flex';
+    setTimeout(() => {
+        welcomeScreen.classList.remove('fade-out');
+    }, 10);
+    
+    // Hide main app editor
+    appContainer.style.display = 'none';
+});
+
+// Back to Welcome Screen handler (Mobile)
+btnBackToWelcomeMobile.addEventListener('click', (e) => {
     e.stopPropagation();
     
     // Stop any active camera streams for security
