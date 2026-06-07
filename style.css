@@ -1575,9 +1575,48 @@ body {
         border-radius: 16px;
     }
 
+    .mobile-top-bar {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        padding: 0 4px 10px 4px !important;
+        border-bottom: 1px solid var(--border-glass) !important;
+        margin-bottom: 12px !important;
+    }
+
+    .mobile-logo-text {
+        font-family: var(--font-heading);
+        font-weight: 700;
+        font-size: 0.88rem;
+        color: var(--text-main);
+    }
+
+    .btn-back-welcome-mobile {
+        background: rgba(239, 68, 68, 0.1) !important;
+        border: 1px solid rgba(239, 68, 68, 0.2) !important;
+        color: #f87171 !important;
+        padding: 5px 10px !important;
+        border-radius: 6px !important;
+        font-family: var(--font-heading) !important;
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        transition: var(--transition-smooth);
+    }
+
+    .btn-back-welcome-mobile:hover {
+        background: rgba(239, 68, 68, 0.2) !important;
+        border-color: rgba(239, 68, 68, 0.3) !important;
+        color: white !important;
+    }
+
     .canvas-container {
         width: 100%;
-        max-width: 340px;
+        max-width: 320px;
         height: auto;
     }
 
@@ -2199,7 +2238,7 @@ body {
         left: 0 !important;
         z-index: 1000 !important;
         background: #0a0910 !important; /* Solid background to prevent overlap transparency */
-        padding: 10px 15px !important;
+        padding: 8px 12px !important;
         border-bottom: 2px solid var(--border-glass) !important;
         width: 100% !important;
         box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
@@ -2210,12 +2249,14 @@ body {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
-        gap: 10px !important;
+        gap: 8px !important;
     }
 
     .canvas-container {
-        max-width: 260px !important; /* Smaller size on mobile to maximize room for sliders! */
+        width: 100% !important;
+        max-width: min(290px, 78vw) !important; /* Ancho dinámico más compacto */
         margin: 0 auto !important;
+        transition: max-width 0.3s ease;
     }
 
     /* Controls Section scrolls naturally underneath the fixed top */
@@ -2225,7 +2266,8 @@ body {
         display: flex !important;
         flex-direction: column !important;
         gap: 20px !important;
-        padding: 420px 15px 80px 15px !important; /* Pushes the menu items exactly below the fixed canvas view */
+        padding: 430px 15px 80px 15px !important; /* Espaciador inicial por defecto (JS lo ajustará dinámicamente) */
+        transition: padding-top 0.2s ease-out;
     }
 
     .control-card {

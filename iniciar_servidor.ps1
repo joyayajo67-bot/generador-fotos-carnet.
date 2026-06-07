@@ -8,14 +8,14 @@ if (-not $localIp) {
 }
 
 $port = 8080
-$listener = New-Object System.Net.HttpListener
 $started = $false
 $accessWarning = $false
+$listener = $null
 
 while (-not $started -and $port -le 8180) {
+    # Crear una nueva instancia de HttpListener en cada intento para evitar estados de error
+    $listener = New-Object System.Net.HttpListener
     try {
-        $listener.Prefixes.Clear()
-        # Bind specifically to localhost and the local Wi-Fi IP directly to bypass the Windows Wildcard Admin restriction!
         $listener.Prefixes.Add("http://localhost:$port/")
         $listener.Prefixes.Add("http://127.0.0.1:$port/")
         if ($localIp -ne "127.0.0.1") {
@@ -24,17 +24,19 @@ while (-not $started -and $port -le 8180) {
         $listener.Start()
         $started = $true
     } catch {
-        # If binding to the specific IP fails (due to strict local Windows security policies),
-        # fallback to binding ONLY to localhost so the user can at least run it on their PC.
+        # Si falla (por ejemplo, restricción de administrador al usar la IP local),
+        # cerramos este listener e intentamos solo con localhost.
+        $listener.Close()
+        $listener = New-Object System.Net.HttpListener
         try {
-            $listener.Prefixes.Clear()
             $listener.Prefixes.Add("http://localhost:$port/")
             $listener.Prefixes.Add("http://127.0.0.1:$port/")
             $listener.Start()
             $started = $true
             $accessWarning = $true
         } catch {
-            # Port is occupied, try next one
+            # Si también falla, el puerto está realmente ocupado. Cerramos y probamos el siguiente puerto.
+            $listener.Close()
             $port++
         }
     }
@@ -46,6 +48,18 @@ if (-not $started) {
     exit
 }
 
+# Intentar abrir el puerto en el Firewall de Windows si se está ejecutando como Administrador
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($isAdmin -and -not $accessWarning) {
+    try {
+        $ruleName = "GeneradorFotosCarnet_Port_$port"
+        if (-not (Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue)) {
+            New-NetFirewallRule -DisplayName "Generador de Fotos Carnet IA ($port)" -Name $ruleName -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow -ErrorAction SilentlyContinue | Out-Null
+        }
+    } catch {
+        # Ignorar fallos si las políticas de red bloquean la configuración
+    }
+}
 
 Clear-Host
 Write-Host "==================================================================" -ForegroundColor Magenta

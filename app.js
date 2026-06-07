@@ -219,15 +219,18 @@ welcomePresetItems.forEach(item => {
             targetBtn.classList.add('active');
             activePreset = presetName;
             
+            // Show app container first so it has dimensions
+            appContainer.style.display = 'flex';
+            
             // Re-render and configure canvas dimensions
             updateCanvasDimensions();
             
             // Smoothly fade out the welcome screen and show main app
             welcomeScreen.classList.add('fade-out');
-            appContainer.style.display = 'flex';
             
             setTimeout(() => {
                 welcomeScreen.style.display = 'none';
+                adjustMobilePadding();
             }, 500); // match transition duration
         }
     });
@@ -560,6 +563,7 @@ function renderCanvas() {
 
     // Trigger dynamic estimation of export file size
     debounceExportSize();
+    adjustMobilePadding();
 }
 
 
@@ -879,6 +883,7 @@ function updateCanvasDimensions() {
     } else {
         renderCanvas();
     }
+    adjustMobilePadding();
 }
 
 // Orientation Switches listeners
@@ -2580,6 +2585,32 @@ async function toggleTorch(forceState) {
         console.error("Error al controlar la linterna:", err);
     }
 }
+
+// Dynamic adjustment of mobile layout padding to prevent overlapping
+function adjustMobilePadding() {
+    if (window.innerWidth <= 900) {
+        const editorSection = document.querySelector('.editor-section');
+        const controlsSection = document.querySelector('.controls-section');
+        if (editorSection && controlsSection) {
+            requestAnimationFrame(() => {
+                const height = editorSection.offsetHeight;
+                if (height > 0) {
+                    controlsSection.style.setProperty('padding-top', `${height + 15}px`, 'important');
+                }
+            });
+        }
+    } else {
+        const controlsSection = document.querySelector('.controls-section');
+        if (controlsSection) {
+            controlsSection.style.removeProperty('padding-top');
+        }
+    }
+}
+
+// Add event listeners for resizing and load to keep it perfectly sync'd
+window.addEventListener('resize', adjustMobilePadding);
+window.addEventListener('load', adjustMobilePadding);
+document.addEventListener('DOMContentLoaded', adjustMobilePadding);
 
 
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carnet-pwa-v10';
+const CACHE_NAME = 'carnet-pwa-v13';
 
 
 const ASSETS_TO_CACHE = [
