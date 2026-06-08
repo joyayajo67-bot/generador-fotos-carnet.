@@ -19,7 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=13">
+    <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
     <div class="bg-glow"></div>
@@ -74,9 +74,17 @@
                     <p>Alinea, ajusta el encuadre y exporta tus fotografías en tamaño carnet oficial (3x4 cm) de forma inmediata.</p>
                 </div>
             </div>
-            <button id="btnBackToWelcome" class="btn-back-welcome" type="button">
-                <i class="fa-solid fa-chevron-left"></i> Cambiar Formato
-            </button>
+            <div class="header-actions" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                <button id="btnFullscreenToggle" class="btn-fullscreen-toggle" type="button" title="Pantalla Completa">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+                <button id="btnThemeToggle" class="btn-theme-toggle" type="button" title="Cambiar Tema">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="btnBackToWelcome" class="btn-back-welcome" type="button">
+                    <i class="fa-solid fa-chevron-left"></i> Cambiar Formato
+                </button>
+            </div>
         </header>
 
         <!-- Main Workspace -->
@@ -87,9 +95,17 @@
                     <!-- Mobile Top Quick Bar (Visible only on mobile to save vertical space) -->
                     <div class="mobile-top-bar" id="mobileTopBar">
                         <span class="mobile-logo-text"><i class="fa-solid fa-wand-magic-sparkles" style="font-size: 0.8rem; color: var(--primary-hover); margin-right: 4px;"></i> Fotos Carnet <span class="gradient-text">IA</span></span>
-                        <button id="btnBackToWelcomeMobile" class="btn-back-welcome-mobile" type="button">
-                            <i class="fa-solid fa-chevron-left"></i> Cambiar Formato
-                        </button>
+                        <div class="mobile-bar-buttons" style="display: flex; align-items: center; gap: 8px;">
+                            <button id="btnFullscreenToggleMobile" class="btn-fullscreen-toggle-mobile" type="button" title="Pantalla Completa">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                            <button id="btnThemeToggleMobile" class="btn-theme-toggle-mobile" type="button" title="Cambiar Tema">
+                                <i class="fa-solid fa-moon"></i>
+                            </button>
+                            <button id="btnBackToWelcomeMobile" class="btn-back-welcome-mobile" type="button">
+                                <i class="fa-solid fa-chevron-left"></i> Cambiar Formato
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Frente / Reverso Tab Switcher (Visible only for Cédula preset) -->
@@ -108,9 +124,18 @@
                         <!-- Live Webcam View Element -->
                         <video id="webcamVideo" autoplay playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
                         
+                        <!-- Camera Timer Countdown Overlay -->
+                        <div class="camera-timer-overlay" id="cameraTimerOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; align-items: center; justify-content: center; background: rgba(10, 9, 16, 0.5); backdrop-filter: blur(4px);">
+                            <span id="cameraTimerCountdown" style="font-family: var(--font-heading); font-size: 6rem; font-weight: 800; color: white; text-shadow: 0 0 30px rgba(168, 85, 247, 0.8); animation: pulseTimer 1s infinite;">3</span>
+                        </div>
+                        
+                        <!-- Flash Overlay Effect -->
+                        <div class="flash-overlay" id="flashOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 15; transition: opacity 0.1s ease;"></div>
+                        
                         <!-- Leveling Bubble Overlay (Parallel Photo Mode) -->
                         <div class="leveling-overlay" id="levelingOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 9, 16, 0.3);">
                             <div class="leveling-target" style="position: relative; width: 120px; height: 120px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <div class="leveling-blur-ring" id="levelingBlurRing"></div>
                                 <div class="leveling-circle-outer" style="position: absolute; width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;"></div>
                                 <div class="leveling-circle-inner" style="position: absolute; width: 12px; height: 12px; border: 1.5px solid var(--primary-hover); border-radius: 50%;"></div>
                                 <div class="leveling-bubble" id="levelingBubble" style="position: absolute; width: 22px; height: 22px; background: #ef4444; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: background 0.2s, transform 0.1s ease-out; transform: translate(0px, 0px);"></div>
@@ -161,6 +186,9 @@
                         <button id="btnToggleParallel" class="webcam-btn-icon" title="Modo Foto Paralela (Giroscopio)" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12);" type="button">
                             <i class="fa-solid fa-compass-drafting"></i>
                         </button>
+                        <button id="btnWebcamTimer" class="webcam-btn-icon" title="Temporizador de Cámara" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12);" type="button">
+                            <i class="fa-solid fa-clock"></i> <span id="timerIndicator" style="font-size: 0.65rem; font-weight: 700; margin-left: 2px;">Off</span>
+                        </button>
                         <button id="btnWebcamCapture" class="webcam-btn-capture" title="Tomar Foto" type="button">
                             <i class="fa-solid fa-camera"></i>
                         </button>
@@ -186,6 +214,9 @@
                         <button id="btnPerspectiveWarp" title="Corregir Perspectiva (Escáner 3D)" style="background: rgba(37, 99, 235, 0.12); border-color: rgba(37, 99, 235, 0.25); color: #60a5fa;" type="button">
                             <i class="fa-solid fa-crop-simple"></i> Escáner 3D
                         </button>
+                        <button id="btnLockImage" title="Fijar Imagen / Bloquear edición" style="background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); color: #34d399;" type="button">
+                            <i class="fa-solid fa-lock"></i> Fijar
+                        </button>
                         <button id="btnRotateLeft" title="Rotar 90° a la izquierda" type="button">
                             <i class="fa-solid fa-arrow-rotate-left"></i>
                         </button>
@@ -196,323 +227,344 @@
                             <i class="fa-solid fa-arrows-left-right"></i>
                         </button>
                     </div>
-                    
-                    <!-- File Info Bar -->
-                    <div class="file-info-bar" id="fileInfoBar" style="display: none;">
-                        <div class="info-item">
-                            <span class="info-title"><i class="fa-solid fa-file-image"></i> Archivo Original</span>
-                            <span class="info-val" id="infoOriginal">- px &bull; - KB</span>
-                        </div>
-                        <div class="info-divider"></div>
-                        <div class="info-item">
-                            <span class="info-title"><i class="fa-solid fa-file-export"></i> Archivo de Salida (Estimado)</span>
-                            <span class="info-val" id="infoExport">- px &bull; - KB</span>
-                        </div>
-                    </div>
+
                 </div>
             </section>
 
             <!-- Right: Control Panel Area -->
             <section class="controls-section">
                 <!-- Card 1: Import & Presets -->
-                <div class="control-card">
-                    <div class="card-header">
+                <div class="control-card collapsible expanded" id="cardEncuadre">
+                    <div class="card-header accordion-trigger">
                         <i class="fa-solid fa-sliders"></i>
                         <h2>Ajustes de Encuadre</h2>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
                     </div>
-                    
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text"><i class="fa-solid fa-magnifying-glass-plus"></i> Zoom</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numZoom" class="slider-number-input" min="10" max="300" value="100" disabled>
-                                <span class="unit-label">%</span>
+                    <div class="card-body">
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text"><i class="fa-solid fa-magnifying-glass-plus"></i> Zoom</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numZoom" class="slider-number-input" min="10" max="300" value="100" disabled>
+                                    <span class="unit-label">%</span>
+                                </div>
                             </div>
+                            <input type="range" id="sliderZoom" min="10" max="300" value="100" class="slider" disabled>
                         </div>
-                        <input type="range" id="sliderZoom" min="10" max="300" value="100" class="slider" disabled>
-                    </div>
 
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text"><i class="fa-solid fa-arrows-spin"></i> Rotación</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numRotate" class="slider-number-input" min="-180" max="180" value="0" disabled>
-                                <span class="unit-label">°</span>
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text"><i class="fa-solid fa-arrows-spin"></i> Rotación</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numRotate" class="slider-number-input" min="-180" max="180" value="0" disabled>
+                                    <span class="unit-label">°</span>
+                                </div>
                             </div>
+                            <input type="range" id="sliderRotate" min="-180" max="180" value="0" class="slider" disabled>
                         </div>
-                        <input type="range" id="sliderRotate" min="-180" max="180" value="0" class="slider" disabled>
                     </div>
                 </div>
 
                 <!-- Card 2: Image Filters -->
-                <div class="control-card">
-                    <div class="card-header">
+                <div class="control-card collapsible expanded" id="cardImagen">
+                    <div class="card-header accordion-trigger">
                         <i class="fa-solid fa-sliders-h"></i>
                         <h2>Ajustes de Imagen</h2>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
                     </div>
-
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text"><i class="fa-solid fa-sun"></i> Brillo</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numBrightness" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                    <div class="card-body">
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text"><i class="fa-solid fa-sun"></i> Brillo</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numBrightness" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                                </div>
                             </div>
+                            <input type="range" id="sliderBrightness" min="-100" max="100" value="0" class="slider" disabled>
                         </div>
-                        <input type="range" id="sliderBrightness" min="-100" max="100" value="0" class="slider" disabled>
-                    </div>
 
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text"><i class="fa-solid fa-circle-half-stroke"></i> Contraste</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numContrast" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text"><i class="fa-solid fa-circle-half-stroke"></i> Contraste</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numContrast" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                                </div>
                             </div>
+                            <input type="range" id="sliderContrast" min="-100" max="100" value="0" class="slider" disabled>
                         </div>
-                        <input type="range" id="sliderContrast" min="-100" max="100" value="0" class="slider" disabled>
-                    </div>
 
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text"><i class="fa-solid fa-droplet"></i> Saturación</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numSaturation" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text"><i class="fa-solid fa-droplet"></i> Saturación</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numSaturation" class="slider-number-input" min="-100" max="100" value="0" disabled>
+                                </div>
                             </div>
+                            <input type="range" id="sliderSaturation" min="-100" max="100" value="0" class="slider" disabled>
                         </div>
-                        <input type="range" id="sliderSaturation" min="-100" max="100" value="0" class="slider" disabled>
+
+                        <!-- Texture Simulator -->
+                        <div class="control-group" style="margin-top: 10px;">
+                            <span class="label-text"><i class="fa-solid fa-scroll"></i> Textura de Papel</span>
+                            <select id="paperTextureSelect" class="custom-select" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-main); font-family: var(--font-heading); font-size: 0.85rem; width: 100%; outline: none; transition: var(--transition-smooth); cursor: pointer;">
+                                <option value="none">Ninguna (Digital Limpio)</option>
+                                <option value="mate">Papel Fotográfico Mate</option>
+                                <option value="glossy">Papel Fotográfico Brillante</option>
+                            </select>
+                        </div>
+
+                        <!-- Background color keying (Chroma key) -->
+                        <div class="control-group" style="margin-top: 10px;">
+                            <span class="label-text"><i class="fa-solid fa-paint-roller"></i> Filtro de Fondo Inteligente</span>
+                            <select id="backgroundColorFilterSelect" class="custom-select" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px; color: var(--text-main); font-family: var(--font-heading); font-size: 0.85rem; width: 100%; outline: none; transition: var(--transition-smooth); cursor: pointer;">
+                                <option value="none">Original (Sin cambios)</option>
+                                <option value="white">Forzar Fondo Blanco</option>
+                                <option value="blue">Forzar Fondo Azul Claro</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Card 2.5: Multicédula Management (Visible only in Cédula mode) -->
-                <div class="control-card" id="cedulaManagerCard" style="display: none;">
-                    <div class="card-header">
+                <div class="control-card collapsible expanded" id="cedulaManagerCard" style="display: none;">
+                    <div class="card-header accordion-trigger">
                         <i class="fa-solid fa-users-rectangle"></i>
                         <h2>Gestión de Multicédula</h2>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
                     </div>
-                    
-                    <div class="control-group">
-                        <div class="cedula-list" id="cedulaListContainer">
-                            <!-- Items will be generated dynamically in JS -->
+                    <div class="card-body">
+                        <div class="control-group">
+                            <div class="cedula-list" id="cedulaListContainer">
+                                <!-- Items will be generated dynamically in JS -->
+                            </div>
+                            <button id="btnAddCedula" class="upload-btn-secondary" style="width: 100%; border-style: dashed; background: rgba(147, 51, 234, 0.05); color: var(--primary-hover); margin-top: 10px;" type="button">
+                                <i class="fa-solid fa-plus"></i> Agregar Documento
+                            </button>
                         </div>
-                        <button id="btnAddCedula" class="upload-btn-secondary" style="width: 100%; border-style: dashed; background: rgba(147, 51, 234, 0.05); color: var(--primary-hover); margin-top: 10px;" type="button">
-                            <i class="fa-solid fa-plus"></i> Agregar Documento
-                        </button>
-                    </div>
 
-                    <div class="control-group">
-                        <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-table-cells"></i> Distribución Multicédula</span>
-                        <div class="orientation-custom-grid">
-                            <label class="orient-radio-card active" id="labelDistStacked">
-                                <input type="radio" name="multicedula_dist" id="radioDistStacked" checked style="display:none;">
-                                <span class="radio-indicator"></span>
-                                <span class="orient-text">Una bajo otra</span>
-                            </label>
-                            
-                            <label class="orient-radio-card" id="labelDistGrid">
-                                <input type="radio" name="multicedula_dist" id="radioDistGrid" style="display:none;">
-                                <span class="radio-indicator"></span>
-                                <span class="orient-text">Dos por fila</span>
-                            </label>
+                        <div class="control-group">
+                            <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-table-cells"></i> Distribución Multicédula</span>
+                            <div class="orientation-custom-grid">
+                                <label class="orient-radio-card active" id="labelDistStacked">
+                                    <input type="radio" name="multicedula_dist" id="radioDistStacked" checked style="display:none;">
+                                    <span class="radio-indicator"></span>
+                                    <span class="orient-text">Una bajo otra</span>
+                                </label>
+                                
+                                <label class="orient-radio-card" id="labelDistGrid">
+                                    <input type="radio" name="multicedula_dist" id="radioDistGrid" style="display:none;">
+                                    <span class="radio-indicator"></span>
+                                    <span class="orient-text">Dos por fila</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card 3: Export Details with Templates -->
-                <div class="control-card">
-                    <div class="card-header">
+                <div class="control-card collapsible expanded" id="cardExport">
+                    <div class="card-header accordion-trigger">
                         <i class="fa-solid fa-file-invoice"></i>
                         <h2>Exportación Profesional con Plantillas</h2>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
                     </div>
-                    
-                    <!-- Advanced Presets Grid -->
-                    <div class="presets-advanced-grid">
-                        <button class="preset-card" data-preset="pasaporte" data-w="600" data-h="600" id="presetPasaporte" type="button">
-                            <span class="active-badge">ACTIVE</span>
-                            <i class="fa-solid fa-passport preset-icon"></i>
-                            <strong class="preset-title">Pasaporte (2x2")</strong>
-                            <span class="preset-desc dims-label">600 x 600 px (1:1)</span>
-                        </button>
-                        
-                        <button class="preset-card active" data-preset="carnet" data-w="600" data-h="800" id="presetCarnet" type="button">
-                            <span class="active-badge">ACTIVE</span>
-                            <i class="fa-solid fa-id-card preset-icon"></i>
-                            <strong class="preset-title">Carnet (3x4 cm)</strong>
-                            <span class="preset-desc dims-label">600 x 800 px (3:4)</span>
-                        </button>
-                        
-                        <button class="preset-card" data-preset="intt" data-w="336" data-h="448" id="presetAlt" type="button">
-                            <span class="active-badge">ACTIVE</span>
-                            <i class="fa-solid fa-address-card preset-icon"></i>
-                            <strong class="preset-title">Digital INTT</strong>
-                            <span class="preset-desc dims-label">336 x 448 px (3:4)</span>
-                        </button>
-
-                        <button class="preset-card" data-preset="cedula" data-w="1004" data-h="673" id="presetCedula" type="button">
-                            <span class="active-badge">ACTIVE</span>
-                            <i class="fa-solid fa-address-card preset-icon" style="color: var(--primary-hover);"></i>
-                            <strong class="preset-title">Cédula (8.5x5.7 cm)</strong>
-                            <span class="preset-desc dims-label">1004 x 673 px (1.5:1)</span>
-                        </button>
-                    </div>
-
-                    <!-- Custom Orientation and Rotation Selector -->
-                    <div class="control-group">
-                        <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-arrows-spin"></i> Orientación y Rotación <span class="badge-new">NEW</span></span>
-                        <div class="orientation-custom-grid">
-                            <label class="orient-radio-card active" id="labelOrientVertical">
-                                <input type="radio" name="orientation" id="radioOrientVertical" checked style="display:none;">
-                                <span class="radio-indicator"></span>
-                                <div class="orient-visual-vertical"></div>
-                                <span class="orient-text">Vertical</span>
-                            </label>
+                    <div class="card-body">
+                        <!-- Advanced Presets Grid -->
+                        <div class="presets-advanced-grid">
+                            <button class="preset-card" data-preset="pasaporte" data-w="600" data-h="600" id="presetPasaporte" type="button">
+                                <span class="active-badge">ACTIVE</span>
+                                <i class="fa-solid fa-passport preset-icon"></i>
+                                <strong class="preset-title">Pasaporte (2x2")</strong>
+                                <span class="preset-desc dims-label">600 x 600 px (1:1)</span>
+                            </button>
                             
-                            <label class="orient-radio-card" id="labelOrientHorizontal">
-                                <input type="radio" name="orientation" id="radioOrientHorizontal" style="display:none;">
-                                <span class="radio-indicator"></span>
-                                <div class="orient-visual-horizontal"></div>
-                                <span class="orient-text">Horizontal</span>
-                            </label>
+                            <button class="preset-card active" data-preset="carnet" data-w="600" data-h="800" id="presetCarnet" type="button">
+                                <span class="active-badge">ACTIVE</span>
+                                <i class="fa-solid fa-id-card preset-icon"></i>
+                                <strong class="preset-title">Carnet (3x4 cm)</strong>
+                                <span class="preset-desc dims-label">600 x 800 px (3:4)</span>
+                            </button>
+                            
+                            <button class="preset-card" data-preset="intt" data-w="336" data-h="448" id="presetAlt" type="button">
+                                <span class="active-badge">ACTIVE</span>
+                                <i class="fa-solid fa-address-card preset-icon"></i>
+                                <strong class="preset-title">Digital INTT</strong>
+                                <span class="preset-desc dims-label">336 x 448 px (3:4)</span>
+                            </button>
+
+                            <button class="preset-card" data-preset="cedula" data-w="1004" data-h="673" id="presetCedula" type="button">
+                                <span class="active-badge">ACTIVE</span>
+                                <i class="fa-solid fa-address-card preset-icon" style="color: var(--primary-hover);"></i>
+                                <strong class="preset-title">Cédula (8.5x5.7 cm)</strong>
+                                <span class="preset-desc dims-label">1004 x 673 px (1.5:1)</span>
+                            </button>
                         </div>
-                    </div>
 
-                    <!-- Printing Templates with Live Preview Grid -->
-                    <div class="control-group">
-                        <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-print"></i> Plantilla de Impresión <span class="badge-new">NEW</span></span>
-                        <div class="print-template-container">
-                            <!-- Paper sheet preview -->
-                            <div class="paper-preview-container">
-                                <div class="paper-sheet" id="paperSheet">
-                                    <!-- Visual mini-thumbs will be drawn dynamically in JS -->
-                                    <div class="paper-thumb-empty"></div>
-                                </div>
-                            </div>
-                            
-                            <!-- Selection panel -->
-                            <div class="print-select-panel">
-                                <select id="printTemplateSelect" class="custom-select" disabled>
-                                    <option value="single">Foto Única (1 foto)</option>
-                                    <option value="4x6">Hoja 4x6" (8 fotos)</option>
-                                    <option value="a4">Hoja A4 (16 fotos)</option>
-                                    <option value="letter">Hoja Carta (16 fotos)</option>
-                                    <option value="legal">Hoja Oficio (20 fotos)</option>
-                                    <option value="cedula_single">Cédula: Solo Frente (Carta)</option>
-                                    <option value="cedula_double">Cédula: Frente + Reverso (Carta)</option>
-                                    <option value="multicedula">Multicédula: Pliego Impresión</option>
-                                </select>
+                        <!-- Custom Orientation and Rotation Selector -->
+                        <div class="control-group">
+                            <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-arrows-spin"></i> Orientación y Rotación <span class="badge-new">NEW</span></span>
+                            <div class="orientation-custom-grid">
+                                <label class="orient-radio-card active" id="labelOrientVertical">
+                                    <input type="radio" name="orientation" id="radioOrientVertical" checked style="display:none;">
+                                    <span class="radio-indicator"></span>
+                                    <div class="orient-visual-vertical"></div>
+                                    <span class="orient-text">Vertical</span>
+                                </label>
                                 
-                                <!-- Cédula Single Position Selector -->
-                                <div class="cedula-position-group" id="cedulaPositionGroup" style="display: none; margin-top: 8px;">
-                                    <span class="label-text" style="font-size: 0.75rem; margin-bottom: 4px;">Posición de la Cédula</span>
-                                    <div class="position-custom-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-                                        <button class="position-btn active" data-pos="top" id="btnPosTop" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Arriba</button>
-                                        <button class="position-btn" data-pos="middle" id="btnPosMiddle" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Medio</button>
-                                        <button class="position-btn" data-pos="bottom" id="btnPosBottom" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Abajo</button>
+                                <label class="orient-radio-card" id="labelOrientHorizontal">
+                                    <input type="radio" name="orientation" id="radioOrientHorizontal" style="display:none;">
+                                    <span class="radio-indicator"></span>
+                                    <div class="orient-visual-horizontal"></div>
+                                    <span class="orient-text">Horizontal</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Printing Templates with Live Preview Grid -->
+                        <div class="control-group">
+                            <span class="label-text" style="margin-bottom: 5px;"><i class="fa-solid fa-print"></i> Plantilla de Impresión <span class="badge-new">NEW</span></span>
+                            <div class="print-template-container">
+                                <!-- Paper sheet preview -->
+                                <div class="paper-preview-container">
+                                    <div class="paper-sheet" id="paperSheet">
+                                        <!-- Visual mini-thumbs will be drawn dynamically in JS -->
+                                        <div class="paper-thumb-empty"></div>
                                     </div>
                                 </div>
-                                <div class="template-info" id="templateInfoText">
-                                    Exporta una sola foto en formato JPG de alta calidad, lista para cargar en la web.
+                                
+                                <!-- Selection panel -->
+                                <div class="print-select-panel">
+                                    <select id="printTemplateSelect" class="custom-select" disabled>
+                                        <option value="single">Foto Única (1 foto)</option>
+                                        <option value="4x6">Hoja 4x6" (8 fotos)</option>
+                                        <option value="a4">Hoja A4 (16 fotos)</option>
+                                        <option value="letter">Hoja Carta (16 fotos)</option>
+                                        <option value="legal">Hoja Oficio (20 fotos)</option>
+                                        <option value="cedula_single">Cédula: Solo Frente (Carta)</option>
+                                        <option value="cedula_double">Cédula: Frente + Reverso (Carta)</option>
+                                        <option value="multicedula">Multicédula: Pliego Impresión</option>
+                                    </select>
+                                    
+                                    <!-- Cédula Single Position Selector -->
+                                    <div class="cedula-position-group" id="cedulaPositionGroup" style="display: none; margin-top: 8px;">
+                                        <span class="label-text" style="font-size: 0.75rem; margin-bottom: 4px;">Posición de la Cédula</span>
+                                        <div class="position-custom-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                            <button class="position-btn active" data-pos="top" id="btnPosTop" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Arriba</button>
+                                            <button class="position-btn" data-pos="middle" id="btnPosMiddle" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Medio</button>
+                                            <button class="position-btn" data-pos="bottom" id="btnPosBottom" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: var(--transition-smooth);" type="button">Abajo</button>
+                                        </div>
+                                    </div>
+                                    <div class="template-info" id="templateInfoText">
+                                        Exporta una sola foto en formato JPG de alta calidad, lista para cargar en la web.
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Quality compression -->
-                    <div class="control-group" style="margin-top: 5px;">
-                        <div class="slider-header">
-                            <span class="label-text">Calidad de compresión</span>
-                            <div class="input-with-unit">
-                                <input type="number" id="numQuality" class="slider-number-input" min="50" max="100" value="95">
-                                <span class="unit-label">%</span>
+                        <!-- Quality compression -->
+                        <div class="control-group" style="margin-top: 5px;">
+                            <div class="slider-header">
+                                <span class="label-text">Calidad de compresión</span>
+                                <div class="input-with-unit">
+                                    <input type="number" id="numQuality" class="slider-number-input" min="50" max="100" value="95">
+                                    <span class="unit-label">%</span>
+                                </div>
                             </div>
+                            <input type="range" id="sliderQuality" min="50" max="100" value="95" class="slider">
                         </div>
-                        <input type="range" id="sliderQuality" min="50" max="100" value="95" class="slider">
-                    </div>
 
-                    <button id="btnDownload" class="btn-primary" disabled>
-                        <i class="fa-solid fa-circle-down"></i> Exportar Foto de Alta Calidad
-                    </button>
+                        <button id="btnDownload" class="btn-primary" disabled>
+                            <i class="fa-solid fa-circle-down"></i> Exportar Foto de Alta Calidad
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Card 4: Pixels to Centimeters Converter -->
-                <div class="control-card">
-                    <div class="card-header">
+                <div class="control-card collapsible expanded" id="cardConverter">
+                    <div class="card-header accordion-trigger">
                         <i class="fa-solid fa-calculator"></i>
                         <h2>Convertidor de Píxeles a Centímetros</h2>
+                        <i class="fa-solid fa-chevron-down accordion-icon"></i>
                     </div>
-
-                    <!-- Live Aspect Grid Preview Box -->
-                    <div class="converter-preview-wrapper">
-                        <div class="converter-box-container">
-                            <div class="converter-box" id="convBox">
-                                <span class="conv-label-width" id="convLabelWidth">443 px / 3.75 cm</span>
-                                <span class="conv-label-height" id="convLabelHeight">336 px / 2.84 cm</span>
-                                <span class="conv-label-dpi" id="convLabelDpi">300 DPI</span>
+                    <div class="card-body">
+                        <!-- Live Aspect Grid Preview Box -->
+                        <div class="converter-preview-wrapper">
+                            <div class="converter-box-container">
+                                <div class="converter-box" id="convBox">
+                                    <span class="conv-label-width" id="convLabelWidth">443 px / 3.75 cm</span>
+                                    <span class="conv-label-height" id="convLabelHeight">336 px / 2.84 cm</span>
+                                    <span class="conv-label-dpi" id="convLabelDpi">300 DPI</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Centimeter readouts -->
-                    <div class="cm-readouts-grid">
-                        <div class="readout-item">
-                            <label for="numConvCmWidth" class="readout-label">Ancho (cm)</label>
-                            <input type="number" id="numConvCmWidth" class="cm-number-input" step="0.01" min="0.5" max="100" value="3.75">
-                        </div>
-                        <div class="readout-item">
-                            <label for="numConvCmHeight" class="readout-label">Alto (cm)</label>
-                            <input type="number" id="numConvCmHeight" class="cm-number-input" step="0.01" min="0.5" max="100" value="2.84">
-                        </div>
-                    </div>
-
-                    <!-- Pixels and DPI controls -->
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text">Ancho (px)</span>
-                            <div class="input-with-slider-value">
-                                <input type="number" id="numConvWidth" class="number-input-small" min="100" max="2000" value="443">
+                        <!-- Centimeter readouts -->
+                        <div class="cm-readouts-grid">
+                            <div class="readout-item">
+                                <label for="numConvCmWidth" class="readout-label">Ancho (cm)</label>
+                                <input type="number" id="numConvCmWidth" class="cm-number-input" step="0.01" min="0.5" max="100" value="3.75">
+                            </div>
+                            <div class="readout-item">
+                                <label for="numConvCmHeight" class="readout-label">Alto (cm)</label>
+                                <input type="number" id="numConvCmHeight" class="cm-number-input" step="0.01" min="0.5" max="100" value="2.84">
                             </div>
                         </div>
-                        <input type="range" id="sliderConvWidth" min="100" max="2000" value="443" class="slider">
-                    </div>
 
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text">Alto (px)</span>
-                            <div class="input-with-slider-value">
-                                <input type="number" id="numConvHeight" class="number-input-small" min="100" max="2000" value="336">
+                        <!-- Pixels and DPI controls -->
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text">Ancho (px)</span>
+                                <div class="input-with-slider-value">
+                                    <input type="number" id="numConvWidth" class="number-input-small" min="100" max="2000" value="443">
+                                </div>
                             </div>
+                            <input type="range" id="sliderConvWidth" min="100" max="2000" value="443" class="slider">
                         </div>
-                        <input type="range" id="sliderConvHeight" min="100" max="2000" value="336" class="slider">
-                    </div>
 
-                    <div class="control-group">
-                        <div class="slider-header">
-                            <span class="label-text">Resolución (DPI)</span>
-                            <div class="input-with-slider-value">
-                                <input type="number" id="numConvDpi" class="number-input-small" min="72" max="600" value="300">
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text">Alto (px)</span>
+                                <div class="input-with-slider-value">
+                                    <input type="number" id="numConvHeight" class="number-input-small" min="100" max="2000" value="336">
+                                </div>
                             </div>
+                            <input type="range" id="sliderConvHeight" min="100" max="2000" value="336" class="slider">
                         </div>
-                        <input type="range" id="sliderConvDpi" min="72" max="600" value="300" class="slider">
-                    </div>
 
-                    <!-- DPI Rápido Selector carousel style -->
-                    <div class="control-group">
-                        <span class="label-text" style="margin-bottom: 5px;">DPI Rápido</span>
-                        <div class="dpi-quick-selector">
-                            <button id="btnDpiPrev" class="dpi-arrow-btn" type="button"><i class="fa-solid fa-chevron-left"></i></button>
-                            <div class="dpi-display-box" id="dpiDisplayBox">300</div>
-                            <button id="btnDpiNext" class="dpi-arrow-btn" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <span class="label-text">Resolución (DPI)</span>
+                                <div class="input-with-slider-value">
+                                    <input type="number" id="numConvDpi" class="number-input-small" min="72" max="600" value="300">
+                                </div>
+                            </div>
+                            <input type="range" id="sliderConvDpi" min="72" max="600" value="300" class="slider">
+                        </div>
+
+                        <!-- DPI Rápido Selector carousel style -->
+                        <div class="control-group">
+                            <span class="label-text" style="margin-bottom: 5px;">DPI Rápido</span>
+                            <div class="dpi-quick-selector">
+                                <button id="btnDpiPrev" class="dpi-arrow-btn" type="button"><i class="fa-solid fa-chevron-left"></i></button>
+                                <div class="dpi-display-box" id="dpiDisplayBox">300</div>
+                                <button id="btnDpiNext" class="dpi-arrow-btn" type="button"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
+                </div>
 
-                <!-- Tips Panel -->
-                <div class="tips-panel">
-                    <h3><i class="fa-solid fa-lightbulb"></i> Recomendaciones Oficiales</h3>
-                    <ul>
-                        <li><i class="fa-solid fa-check"></i> El rostro debe estar completamente centrado, mirando de frente.</li>
-                        <li><i class="fa-solid fa-check"></i> Preferiblemente utiliza una foto tomada con fondo blanco liso.</li>
-                        <li><i class="fa-solid fa-check"></i> Asegura una buena iluminación en ambos lados de la cara.</li>
-                        <li><i class="fa-solid fa-check"></i> Evita sombras fuertes o reflejos en lentes.</li>
-                    </ul>
+                <!-- File Info Bar -->
+                <div class="file-info-bar" id="fileInfoBar" style="display: none;">
+                    <div class="info-item">
+                        <span class="info-title"><i class="fa-solid fa-file-image"></i> Archivo Original</span>
+                        <span class="info-val" id="infoOriginal">- px &bull; - KB</span>
+                    </div>
+                    <div class="info-divider"></div>
+                    <div class="info-item">
+                        <span class="info-title"><i class="fa-solid fa-file-export"></i> Archivo de Salida (Estimado)</span>
+                        <span class="info-val" id="infoExport">- px &bull; - KB</span>
+                    </div>
                 </div>
             </section>
         </main>
@@ -523,7 +575,7 @@
         </footer>
     </div>
     
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=17"></script>
     <script>
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {

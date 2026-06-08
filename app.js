@@ -32,6 +32,7 @@ const appContainer = document.querySelector('.app-container');
 const levelingOverlay = document.getElementById('levelingOverlay');
 const levelingBubble = document.getElementById('levelingBubble');
 const levelingStatus = document.getElementById('levelingStatus');
+const levelingBlurRing = document.getElementById('levelingBlurRing');
 
 // Perspective DOM Elements
 const perspectiveHandlesOverlay = document.getElementById('perspectiveHandlesOverlay');
@@ -99,6 +100,7 @@ const btnRotateLeft = document.getElementById('btnRotateLeft');
 const btnRotateRight = document.getElementById('btnRotateRight');
 const btnMirror = document.getElementById('btnMirror');
 const btnDownload = document.getElementById('btnDownload');
+const btnLockImage = document.getElementById('btnLockImage');
 
 // Canvas Context
 const ctx = photoCanvas.getContext('2d');
@@ -146,6 +148,7 @@ let webcamStream = null;
 let currentFacingMode = 'user'; // 'user' (front camera) or 'environment' (back camera)
 let isParallelActive = false; // webcam level sensor state
 let isPerspectiveAdjustmentActive = false; // manual corner adjusting mode active state
+let isEditingLocked = false; // image adjustments locked state
 let pendingCapturedFile = null; // holds snapped frame before accept/discard
 let isTorchActive = false; // webcam flashlight state
 
@@ -334,6 +337,9 @@ function processImageFile(file) {
             }
             
             enableControls(true);
+            if (isEditingLocked) {
+                toggleImageLock(false);
+            }
             calculateInitialFit();
             
             // Display Canvas
@@ -367,6 +373,49 @@ function enableControls(enable) {
     });
     btnDownload.disabled = !enable;
     printTemplateSelect.disabled = !enable;
+    if (btnLockImage) btnLockImage.disabled = !enable;
+}
+
+// Toggle Image Lock
+function toggleImageLock(locked) {
+    isEditingLocked = locked;
+    
+    // Disable or enable sliders
+    const inputs = [
+        sliderZoom, sliderRotate, sliderBrightness, sliderContrast, sliderSaturation,
+        numZoom, numRotate, numBrightness, numContrast, numSaturation
+    ];
+    inputs.forEach(input => {
+        input.disabled = locked;
+    });
+    
+    // Disable or enable canvas toolbar buttons except Lock
+    const toolbarButtons = [
+        btnReset,
+        document.getElementById('btnPerspectiveWarp'),
+        btnRotateLeft,
+        btnRotateRight,
+        btnMirror
+    ];
+    toolbarButtons.forEach(btn => {
+        if (btn) btn.disabled = locked;
+    });
+    
+    if (btnLockImage) {
+        if (locked) {
+            btnLockImage.innerHTML = '<i class="fa-solid fa-lock-open"></i> Desbloquear';
+            btnLockImage.classList.add('active');
+            btnLockImage.style.background = 'rgba(239, 68, 68, 0.15)';
+            btnLockImage.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+            btnLockImage.style.color = '#f87171';
+        } else {
+            btnLockImage.innerHTML = '<i class="fa-solid fa-lock"></i> Fijar';
+            btnLockImage.classList.remove('active');
+            btnLockImage.style.background = 'rgba(16, 185, 129, 0.12)';
+            btnLockImage.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            btnLockImage.style.color = '#34d399';
+        }
+    }
 }
 
 // Reset states
@@ -459,6 +508,9 @@ function renderCanvas() {
     const isReverso = (activePreset === 'cedula' && activeSide === 'reverso');
     const img = isReverso ? reversoImage : originalImage;
     
+    // Update button text and styles to match warp state
+    updatePerspectiveButtonUI();
+    
     // Clear canvas
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
@@ -530,6 +582,17 @@ function renderCanvas() {
         finalImgToDraw = warpQuadToRect(img, projectedCorners, img.width, img.height);
     }
     
+    // Apply background color filter if selected
+    const bgFilterVal = document.getElementById('backgroundColorFilterSelect')?.value || 'none';
+    if (bgFilterVal !== 'none') {
+        const offCtxCanvas = document.createElement('canvas');
+        offCtxCanvas.width = finalImgToDraw.width;
+        offCtxCanvas.height = finalImgToDraw.height;
+        const offCtx = offCtxCanvas.getContext('2d');
+        offCtx.drawImage(finalImgToDraw, 0, 0);
+        finalImgToDraw = applyChromaKeyFilter(offCtxCanvas, bgFilterVal);
+    }
+    
     // Draw the image centered at the origin
     if (isPerspectiveAdjustmentActive) {
         // Draw the image preserving its correct, natural aspect ratio (contain fit)
@@ -552,11 +615,13 @@ function renderCanvas() {
         const imgH = finalImgToDraw.height;
         ctx.drawImage(finalImgToDraw, -imgW / 2, -imgH / 2, imgW, imgH);
     }
-
-
     
     // Restore state
     ctx.restore();
+
+    // Apply Paper Texture Simulator
+    const textureVal = document.getElementById('paperTextureSelect')?.value || 'none';
+    applyPaperTexture(ctx, canvasWidth, canvasHeight, textureVal);
 
     // Update the live mini-paper printing preview sheet!
     updatePaperPreview();
@@ -589,6 +654,7 @@ function getEventCoords(e) {
 
 function startPan(e) {
     if (!originalImage) return;
+    if (isEditingLocked) return;
     
     // Prevent mobile touch scroll behavior
     if (e.cancelable) e.preventDefault();
@@ -612,6 +678,7 @@ function startPan(e) {
 
 function movePan(e) {
     if (!originalImage) return;
+    if (isEditingLocked) return;
     if (e.cancelable) e.preventDefault();
 
     if (e.touches && e.touches.length === 2) {
@@ -759,9 +826,17 @@ numQuality.addEventListener('blur', (e) => {
 
 // Canvas Toolbar Actions
 btnReset.addEventListener('click', () => {
+    isPerspectiveAdjustmentActive = false;
+    perspectiveHandlesOverlay.style.display = 'none';
     resetState();
     calculateInitialFit();
+    updatePerspectiveButtonUI();
     renderCanvas();
+});
+
+btnLockImage.addEventListener('click', () => {
+    if (!originalImage) return;
+    toggleImageLock(!isEditingLocked);
 });
 
 btnRotateLeft.addEventListener('click', () => {
@@ -789,6 +864,7 @@ btnMirror.addEventListener('click', () => {
 
 // Update the canvas and overlay dynamically based on active preset and orientation
 function updateCanvasDimensions() {
+    updateBodyPresetClass();
     const activePresetBtn = document.querySelector('.preset-card.active');
     if (!activePresetBtn) return;
 
@@ -985,6 +1061,10 @@ tabReverso.addEventListener('click', () => {
 
 function switchCedulaSide(side) {
     activeSide = side;
+    
+    // Turn off perspective adjustment mode when switching sides
+    isPerspectiveAdjustmentActive = false;
+    perspectiveHandlesOverlay.style.display = 'none';
 
     if (side === 'frente') {
         tabFrente.classList.add('active');
@@ -1009,6 +1089,7 @@ function switchCedulaSide(side) {
         fileInfoBar.style.display = 'none';
     }
 
+    updatePerspectiveButtonUI();
     renderCanvas();
 }
 
@@ -1354,12 +1435,29 @@ function renderImageToOffscreenCanvas(img, imgState, w, h) {
     // Apply perspective warp to high-res output if active
     let finalImgToDraw = img;
     if (imgState.isWarpActive) {
-        finalImgToDraw = warpQuadToRect(img, imgState.corners, img.width, img.height);
+        const projectedCorners = getWarpNormalizedCorners(img, imgState);
+        finalImgToDraw = warpQuadToRect(img, projectedCorners, img.width, img.height);
+    }
+    
+    // Apply background color filter if selected
+    const bgFilterVal = document.getElementById('backgroundColorFilterSelect')?.value || 'none';
+    if (bgFilterVal !== 'none') {
+        const offCtxCanvas = document.createElement('canvas');
+        offCtxCanvas.width = finalImgToDraw.width;
+        offCtxCanvas.height = finalImgToDraw.height;
+        const offCtx = offCtxCanvas.getContext('2d');
+        offCtx.drawImage(finalImgToDraw, 0, 0);
+        finalImgToDraw = applyChromaKeyFilter(offCtxCanvas, bgFilterVal);
     }
     
     tCtx.drawImage(finalImgToDraw, -finalImgToDraw.width / 2, -finalImgToDraw.height / 2, finalImgToDraw.width, finalImgToDraw.height);
     
     tCtx.restore();
+
+    // Apply Paper Texture Simulator
+    const textureVal = document.getElementById('paperTextureSelect')?.value || 'none';
+    applyPaperTexture(tCtx, w, h, textureVal);
+
     return tempCanvas;
 }
 
@@ -2024,6 +2122,7 @@ function stopWebcam() {
     webcamVideo.srcObject = null;
     webcamVideo.style.display = 'none';
     webcamControls.style.display = 'none';
+    if (btnWebcamTimer) btnWebcamTimer.style.display = 'flex';
 
     if (!originalImage) {
         emptyState.style.display = 'flex';
@@ -2052,9 +2151,51 @@ async function switchCamera() {
     startWebcam();
 }
 
-// Capture Snapshot in Native Camera Resolution
+// Capture Snapshot in Native Camera Resolution with countdown timer support
 function captureSnapshot() {
     if (!webcamStream || !webcamVideo.videoWidth) return;
+
+    if (currentTimerDuration > 0) {
+        // Show countdown timer overlay
+        const timerOverlay = document.getElementById('cameraTimerOverlay');
+        const timerCountdown = document.getElementById('cameraTimerCountdown');
+        timerOverlay.style.display = 'flex';
+        
+        let count = currentTimerDuration;
+        timerCountdown.textContent = count;
+        
+        // Disable buttons during countdown
+        btnWebcamCapture.disabled = true;
+        btnWebcamCancel.disabled = true;
+        btnWebcamSwitch.disabled = true;
+        btnWebcamTimer.disabled = true;
+
+        const interval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                timerCountdown.textContent = count;
+            } else {
+                clearInterval(interval);
+                timerOverlay.style.display = 'none';
+                btnWebcamCapture.disabled = false;
+                btnWebcamCancel.disabled = false;
+                btnWebcamSwitch.disabled = false;
+                btnWebcamTimer.disabled = false;
+                triggerFlashAndCapture();
+            }
+        }, 1000);
+    } else {
+        triggerFlashAndCapture();
+    }
+}
+
+function triggerFlashAndCapture() {
+    // Flash Overlay Effect
+    const flashOverlay = document.getElementById('flashOverlay');
+    flashOverlay.style.opacity = '1';
+    setTimeout(() => {
+        flashOverlay.style.opacity = '0';
+    }, 150);
 
     // Freeze camera video stream on screen
     webcamVideo.pause();
@@ -2064,6 +2205,7 @@ function captureSnapshot() {
     btnToggleParallel.style.display = 'none';
     btnWebcamSwitch.style.display = 'none';
     btnWebcamCancel.style.display = 'none';
+    if (btnWebcamTimer) btnWebcamTimer.style.display = 'none';
     btnWebcamAccept.style.display = 'flex';
     btnWebcamRetry.style.display = 'flex';
 
@@ -2125,6 +2267,7 @@ btnWebcamRetry.addEventListener('click', (e) => {
     btnToggleParallel.style.display = 'flex';
     btnWebcamSwitch.style.display = 'flex';
     btnWebcamCancel.style.display = 'flex';
+    if (btnWebcamTimer) btnWebcamTimer.style.display = 'flex';
     btnWebcamAccept.style.display = 'none';
     btnWebcamRetry.style.display = 'none';
 
@@ -2162,6 +2305,7 @@ async function toggleParallelMode(forceState) {
         window.removeEventListener('deviceorientation', handleDeviceOrientation);
         levelingBubble.classList.remove('aligned');
         levelingStatus.classList.remove('aligned');
+        if (levelingBlurRing) levelingBlurRing.classList.remove('aligned');
         levelingBubble.style.transform = "translate(0px, 0px)";
     }
 }
@@ -2216,11 +2360,13 @@ function handleDeviceOrientation(event) {
         levelingBubble.style.transform = "translate(0px, 0px)";
         levelingBubble.classList.add('aligned');
         levelingStatus.classList.add('aligned');
+        if (levelingBlurRing) levelingBlurRing.classList.add('aligned');
         levelingStatus.textContent = "Alineado ✓";
     } else {
         // Out of tolerance
         levelingBubble.classList.remove('aligned');
         levelingStatus.classList.remove('aligned');
+        if (levelingBlurRing) levelingBlurRing.classList.remove('aligned');
         levelingStatus.textContent = `Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;
     }
 }
@@ -2367,26 +2513,52 @@ window.addEventListener('resize', () => {
     }
 });
 
+// Helper to update the Perspective Warp button text and styling dynamically
+function updatePerspectiveButtonUI() {
+    if (!btnPerspectiveWarp) return;
+    
+    if (isPerspectiveAdjustmentActive) {
+        btnPerspectiveWarp.innerHTML = `<i class="fa-solid fa-check"></i> Aplicar Escáner`;
+        btnPerspectiveWarp.style.background = 'rgba(16, 185, 129, 0.2)';
+        btnPerspectiveWarp.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        btnPerspectiveWarp.style.color = '#a7f3d0';
+        btnPerspectiveWarp.classList.add('active');
+    } else if (state && state.isWarpActive) {
+        btnPerspectiveWarp.innerHTML = `<i class="fa-solid fa-crop-simple"></i> Reajustar Escáner`;
+        btnPerspectiveWarp.style.background = 'rgba(37, 99, 235, 0.2)';
+        btnPerspectiveWarp.style.borderColor = 'rgba(37, 99, 235, 0.4)';
+        btnPerspectiveWarp.style.color = '#93c5fd';
+        btnPerspectiveWarp.classList.remove('active');
+    } else {
+        btnPerspectiveWarp.innerHTML = `<i class="fa-solid fa-crop-simple"></i> Escáner 3D`;
+        btnPerspectiveWarp.style.background = '';
+        btnPerspectiveWarp.style.borderColor = '';
+        btnPerspectiveWarp.style.color = '';
+        btnPerspectiveWarp.classList.remove('active');
+    }
+}
+
 // Toggle Perspective adjustments
 btnPerspectiveWarp.addEventListener('click', () => {
     if (!originalImage) return;
 
     if (isPerspectiveAdjustmentActive) {
-        // Exit Adjustment Mode
+        // Exit Adjustment Mode (Apply warp)
         isPerspectiveAdjustmentActive = false;
         perspectiveHandlesOverlay.style.display = 'none';
-        btnPerspectiveWarp.classList.remove('active');
         
         // Turn on real perspective warping rendering
         state.isWarpActive = true;
         
         // Re-enable sliders
         enableControls(true);
+        
+        // Automatically fit the newly warped cropped card to the template canvas
+        calculateInitialFit();
     } else {
-        // Enter Adjustment Mode
+        // Enter Adjustment Mode (Allow realignment)
         isPerspectiveAdjustmentActive = true;
         perspectiveHandlesOverlay.style.display = 'block';
-        btnPerspectiveWarp.classList.add('active');
 
         // Create container SVG if not present
         let svg = document.getElementById('perspectiveSvg');
@@ -2414,6 +2586,7 @@ btnPerspectiveWarp.addEventListener('click', () => {
         updateHandlesDOM();
     }
 
+    updatePerspectiveButtonUI();
     renderCanvas();
 });
 
@@ -2586,31 +2759,338 @@ async function toggleTorch(forceState) {
     }
 }
 
-// Dynamic adjustment of mobile layout padding to prevent overlapping
+// Dynamic adjustment of mobile layout padding (deactivated to allow fluid scrolling)
 function adjustMobilePadding() {
+    // Fluid relative layout doesn't require fixed padding offsets
+}
+
+// Collapses all accordion control cards on mobile by default on startup
+function initializeMobileAccordions() {
     if (window.innerWidth <= 900) {
-        const editorSection = document.querySelector('.editor-section');
-        const controlsSection = document.querySelector('.controls-section');
-        if (editorSection && controlsSection) {
-            requestAnimationFrame(() => {
-                const height = editorSection.offsetHeight;
-                if (height > 0) {
-                    controlsSection.style.setProperty('padding-top', `${height + 15}px`, 'important');
-                }
-            });
-        }
-    } else {
-        const controlsSection = document.querySelector('.controls-section');
-        if (controlsSection) {
-            controlsSection.style.removeProperty('padding-top');
-        }
+        document.querySelectorAll('.control-card.collapsible').forEach(card => {
+            card.classList.remove('expanded');
+        });
     }
 }
 
 // Add event listeners for resizing and load to keep it perfectly sync'd
 window.addEventListener('resize', adjustMobilePadding);
-window.addEventListener('load', adjustMobilePadding);
-document.addEventListener('DOMContentLoaded', adjustMobilePadding);
+window.addEventListener('load', () => {
+    adjustMobilePadding();
+    initializeMobileAccordions();
+});
+document.addEventListener('DOMContentLoaded', () => {
+    adjustMobilePadding();
+    initializeMobileAccordions();
+});
+
+// ==========================================================================
+// Mobile Slider Touch Scroll Prevention Helper
+// Prevents range sliders from snapping values immediately when the user attempts
+// to scroll the page vertically, ensuring smooth horizontal-only value adjustments.
+// ==========================================================================
+let sliderTouchState = null;
+
+document.querySelectorAll('.slider').forEach(slider => {
+    slider.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        sliderTouchState = {
+            slider: slider,
+            initialValue: parseFloat(slider.value),
+            startX: touch.clientX,
+            startY: touch.clientY,
+            hasMoved: false,
+            isScrolling: false
+        };
+    }, { passive: true });
+
+    slider.addEventListener('touchmove', (e) => {
+        if (!sliderTouchState || sliderTouchState.slider !== slider) return;
+        
+        const touch = e.touches[0];
+        const dx = touch.clientX - sliderTouchState.startX;
+        const dy = touch.clientY - sliderTouchState.startY;
+        
+        if (!sliderTouchState.hasMoved) {
+            // Check threshold (e.g. 8 pixels of movement)
+            if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                sliderTouchState.hasMoved = true;
+                if (Math.abs(dy) > Math.abs(dx)) {
+                    sliderTouchState.isScrolling = true;
+                } else {
+                    sliderTouchState.isScrolling = false;
+                }
+            }
+        }
+        
+        if (sliderTouchState.isScrolling) {
+            // Restore the initial value to prevent value jump during vertical scroll
+            slider.value = sliderTouchState.initialValue;
+            
+            // Trigger input event to sync UI if the browser had modified it
+            const event = new Event('input', { bubbles: true });
+            slider.dispatchEvent(event);
+        }
+    }, { passive: true });
+
+    slider.addEventListener('touchend', (e) => {
+        if (sliderTouchState && sliderTouchState.slider === slider) {
+            if (sliderTouchState.isScrolling || !sliderTouchState.hasMoved) {
+                // If the user only tapped or scrolled vertically, restore initial value
+                slider.value = sliderTouchState.initialValue;
+                const event = new Event('input', { bubbles: true });
+                slider.dispatchEvent(event);
+            }
+            sliderTouchState = null;
+        }
+    });
+});
+
+// ==========================================================================
+// Premium UI Dynamic Theme, Accordion, Chroma Key, Texture & HUD systems
+// ==========================================================================
+
+let currentTimerDuration = 0; // State for camera timer: 0 = Off, 3 = 3s, 5 = 5s
+
+// Update preset class on body for color-coding presets
+function updateBodyPresetClass() {
+    document.body.classList.remove('preset-pasaporte', 'preset-carnet', 'preset-intt', 'preset-cedula');
+    document.body.classList.add(`preset-${activePreset}`);
+}
+
+// Background Chroma Key replacement filter
+function applyChromaKeyFilter(srcCanvas, filterMode) {
+    if (filterMode === 'none') return srcCanvas;
+    
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = srcCanvas.width;
+    tempCanvas.height = srcCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(srcCanvas, 0, 0);
+    
+    const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imgData.data;
+    
+    // Sample background color from top-left corner
+    const sampleIdx = (5 * tempCanvas.width + 5) * 4;
+    const refR = data[sampleIdx];
+    const refG = data[sampleIdx + 1];
+    const refB = data[sampleIdx + 2];
+    
+    // Target background color (White or Light Blue)
+    let targetR = 255, targetG = 255, targetB = 255;
+    if (filterMode === 'blue') {
+        targetR = 176; targetG = 224; targetB = 246; // Light official blue
+    }
+    
+    const threshold = 65; 
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        const dist = Math.sqrt(
+            (r - refR) * (r - refR) +
+            (g - refG) * (g - refG) +
+            (b - refB) * (b - refB)
+        );
+        
+        if (dist < threshold) {
+            const blendFactor = Math.max(0, Math.min(1, (threshold - dist) / 15));
+            data[i] = Math.round(targetR * blendFactor + r * (1 - blendFactor));
+            data[i + 1] = Math.round(targetG * blendFactor + g * (1 - blendFactor));
+            data[i + 2] = Math.round(targetB * blendFactor + b * (1 - blendFactor));
+        }
+    }
+    
+    tempCtx.putImageData(imgData, 0, 0);
+    return tempCanvas;
+}
+
+// Paper Texture Simulator Overlays
+function applyPaperTexture(targetCtx, w, h, textureMode) {
+    if (textureMode === 'none') return;
+    
+    targetCtx.save();
+    
+    if (textureMode === 'mate') {
+        // Create fine-grain matte paper texture
+        const noiseCanvas = document.createElement('canvas');
+        noiseCanvas.width = 120;
+        noiseCanvas.height = 120;
+        const nCtx = noiseCanvas.getContext('2d');
+        const nImgData = nCtx.createImageData(120, 120);
+        const nData = nImgData.data;
+        for (let i = 0; i < nData.length; i += 4) {
+            const val = Math.floor(Math.random() * 22);
+            nData[i] = val;
+            nData[i + 1] = val;
+            nData[i + 2] = val;
+            nData[i + 3] = 10; // low opacity
+        }
+        nCtx.putImageData(nImgData, 0, 0);
+        
+        const pattern = targetCtx.createPattern(noiseCanvas, 'repeat');
+        targetCtx.fillStyle = pattern;
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.fillRect(0, 0, w, h);
+        
+        // Soft matte white color wash
+        targetCtx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        targetCtx.fillRect(0, 0, w, h);
+    } else if (textureMode === 'glossy') {
+        // Glossy glare reflection effect
+        const grad = targetCtx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.0)');
+        grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.07)');
+        grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.16)');
+        grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.07)');
+        grad.addColorStop(0.65, 'rgba(255, 255, 255, 0.0)');
+        
+        targetCtx.fillStyle = grad;
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.fillRect(0, 0, w, h);
+    }
+    
+    targetCtx.restore();
+}
+
+// Collapsible accordion card trigger listeners
+document.querySelectorAll('.control-card.collapsible .card-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+        if (e.target.closest('input') || e.target.closest('button') || e.target.closest('select')) {
+            return;
+        }
+        const card = header.closest('.control-card');
+        card.classList.toggle('expanded');
+    });
+});
+
+// Theme Toggle Logic
+const btnThemeToggle = document.getElementById('btnThemeToggle');
+const btnThemeToggleMobile = document.getElementById('btnThemeToggleMobile');
+
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-theme');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    
+    // Sync button icons
+    const icons = [btnThemeToggle?.querySelector('i'), btnThemeToggleMobile?.querySelector('i')];
+    icons.forEach(icon => {
+        if (icon) {
+            icon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+    });
+}
+
+if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
+if (btnThemeToggleMobile) btnThemeToggleMobile.addEventListener('click', toggleTheme);
+
+// Load persisted theme
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') {
+    toggleTheme();
+}
+
+// Camera Timer Button
+const btnWebcamTimer = document.getElementById('btnWebcamTimer');
+const timerIndicator = document.getElementById('timerIndicator');
+
+if (btnWebcamTimer) {
+    btnWebcamTimer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentTimerDuration === 0) {
+            currentTimerDuration = 3;
+            timerIndicator.textContent = "3s";
+            btnWebcamTimer.classList.add('active');
+            btnWebcamTimer.style.background = 'rgba(168, 85, 247, 0.2)';
+            btnWebcamTimer.style.borderColor = 'var(--primary)';
+        } else if (currentTimerDuration === 3) {
+            currentTimerDuration = 5;
+            timerIndicator.textContent = "5s";
+        } else {
+            currentTimerDuration = 0;
+            timerIndicator.textContent = "Off";
+            btnWebcamTimer.classList.remove('active');
+            btnWebcamTimer.style.background = 'rgba(255,255,255,0.08)';
+            btnWebcamTimer.style.borderColor = 'rgba(255,255,255,0.12)';
+        }
+    });
+}
+
+// Bind texture and background filter dropdown changes to trigger canvas updates
+document.getElementById('paperTextureSelect')?.addEventListener('change', renderCanvas);
+document.getElementById('backgroundColorFilterSelect')?.addEventListener('change', renderCanvas);
+
+// Dynamic 3D interactive paper preview effect
+const paperSheetEl = document.getElementById('paperSheet');
+if (paperSheetEl) {
+    const container = paperSheetEl.parentElement;
+    container.addEventListener('mousemove', (e) => {
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const rotateY = -((x / rect.width) - 0.5) * 26; 
+        const rotateX = ((y / rect.height) - 0.5) * 26; 
+        
+        paperSheetEl.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg) translateZ(10px)`;
+    });
+    
+    container.addEventListener('mouseleave', () => {
+        paperSheetEl.style.transform = 'rotateY(0deg) rotateX(0deg) translateZ(0px)';
+    });
+}
+
+// Fullscreen API toggle logic with cross-browser prefix support and secure context handling
+const btnFullscreenToggle = document.getElementById('btnFullscreenToggle');
+const btnFullscreenToggleMobile = document.getElementById('btnFullscreenToggleMobile');
+
+function toggleFullscreen() {
+    const docEl = document.documentElement;
+    const isFullscreenActive = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
+    if (!isFullscreenActive) {
+        const requestMethod = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+        if (requestMethod) {
+            requestMethod.call(docEl).catch(err => {
+                console.warn("Native Fullscreen failed (likely blocked by HTTP non-secure context):", err);
+                alert("Para activar la pantalla completa, Chrome requiere una conexión segura (HTTPS). \n\nSugerencia: Puedes agregar esta aplicación a la pantalla de inicio de tu teléfono (PWA) usando la opción 'Agregar a la pantalla principal' de tu navegador para que se abra siempre a pantalla completa sin barra de direcciones.");
+            });
+        } else {
+            alert("Tu dispositivo o navegador no soporta la API de Pantalla Completa nativa.");
+        }
+    } else {
+        const exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+        if (exitMethod) {
+            exitMethod.call(document);
+        }
+    }
+}
+
+function updateFullscreenIcons() {
+    const isFullscreenActive = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+    const icons = [btnFullscreenToggle?.querySelector('i'), btnFullscreenToggleMobile?.querySelector('i')];
+    icons.forEach(icon => {
+        if (icon) {
+            if (isFullscreenActive) {
+                icon.className = 'fa-solid fa-compress';
+            } else {
+                icon.className = 'fa-solid fa-expand';
+            }
+        }
+    });
+}
+
+if (btnFullscreenToggle) btnFullscreenToggle.addEventListener('click', toggleFullscreen);
+if (btnFullscreenToggleMobile) btnFullscreenToggleMobile.addEventListener('click', toggleFullscreen);
+
+document.addEventListener('fullscreenchange', updateFullscreenIcons);
+document.addEventListener('webkitfullscreenchange', updateFullscreenIcons);
+document.addEventListener('mozfullscreenchange', updateFullscreenIcons);
+document.addEventListener('MSFullscreenChange', updateFullscreenIcons);
 
 
 
