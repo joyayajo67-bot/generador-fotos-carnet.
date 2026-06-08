@@ -17,7 +17,7 @@ echo Identity set successfully.
 echo.
 echo 3. Configurando repositorio remoto origin...
 git remote remove origin 2>nul
-git remote add origin https://github.com/joyayajo67-bot/generador-fotos-carnet.git
+git remote add origin https://github.com/joyayajo67-bot/generador-fotos-carnet..git
 echo.
 echo 4. Configurando rama local a 'main'...
 git branch -M main
@@ -27,7 +27,7 @@ git add .
 echo Files added to staging.
 echo.
 echo 6. Creando confirmacion (Commit)...
-git commit -m "feat: agregar linterna de captura, bloquear seleccion y adaptar responsive cedula"
+git commit -m "feat: corregir escáner 3D y difuminado concéntrico del nivel de cámara"
 echo.
 echo 7. Subiendo cambios a GitHub (Push)...
 echo ---------------------------------------------------
