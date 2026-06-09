@@ -3,6 +3,7 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const photoCanvas = document.getElementById('photoCanvas');
 const guideOverlay = document.getElementById('guideOverlay');
+const guideInstruction = document.querySelector('.guide-instruction');
 const emptyState = document.getElementById('emptyState');
 const canvasToolbar = document.getElementById('canvasToolbar');
 const fileInfoBar = document.getElementById('fileInfoBar');
@@ -33,6 +34,8 @@ const levelingOverlay = document.getElementById('levelingOverlay');
 const levelingBubble = document.getElementById('levelingBubble');
 const levelingStatus = document.getElementById('levelingStatus');
 const levelingBlurRing = document.getElementById('levelingBlurRing');
+const levelingHorizonLine = document.getElementById('levelingHorizonLine');
+const levelingHorizonBar = document.getElementById('levelingHorizonBar');
 
 // Perspective DOM Elements
 const perspectiveHandlesOverlay = document.getElementById('perspectiveHandlesOverlay');
@@ -116,6 +119,14 @@ let originalFileSize = 0;
 let reversoFileSize = 0;
 let activeSide = 'frente'; // 'frente' or 'reverso'
 
+function isReversoActive() {
+    return (activePreset === 'cedula' && activeSide === 'reverso') || (activePreset === 'intt' && activeSide === 'reverso');
+}
+
+function getActiveImage() {
+    return isReversoActive() ? reversoImage : originalImage;
+}
+
 // Multicédula & Position States
 let activeCedulaPosition = 'middle'; // 'top', 'middle', 'bottom'
 let activeMulticedulaDist = 'stacked'; // 'stacked' (one under another) or 'grid' (2 per row)
@@ -174,7 +185,7 @@ dropZone.addEventListener('click', (e) => {
     if (webcamStream || e.target.closest('.empty-state-buttons') || e.target.closest('.webcam-controls')) {
         return;
     }
-    if (!originalImage) {
+    if (!getActiveImage()) {
         fileInput.click();
     }
 });
@@ -308,7 +319,7 @@ function processImageFile(file) {
         return;
     }
 
-    const isReverso = (activePreset === 'cedula' && activeSide === 'reverso');
+    const isReverso = isReversoActive();
 
     if (isReverso) {
         reversoFileSize = file.size;
@@ -420,7 +431,7 @@ function toggleImageLock(locked) {
 
 // Reset states
 function resetState() {
-    if (activePreset === 'cedula' && activeSide === 'reverso') {
+    if (isReversoActive()) {
         resetReversoState();
     } else {
         resetFrenteState();
@@ -482,7 +493,7 @@ function updateSlidersFromState(s) {
 
 // Calculate perfect initial fit for image centered inside canvas
 function calculateInitialFit() {
-    const img = (activePreset === 'cedula' && activeSide === 'reverso') ? reversoImage : originalImage;
+    const img = getActiveImage();
     if (!img) return;
     
     const imgRatio = img.width / img.height;
@@ -505,7 +516,7 @@ function calculateInitialFit() {
 
 // Main Render Canvas Logic
 function renderCanvas() {
-    const isReverso = (activePreset === 'cedula' && activeSide === 'reverso');
+    const isReverso = isReversoActive();
     const img = isReverso ? reversoImage : originalImage;
     
     // Update button text and styles to match warp state
@@ -653,7 +664,7 @@ function getEventCoords(e) {
 }
 
 function startPan(e) {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
     if (isEditingLocked) return;
     
     // Prevent mobile touch scroll behavior
@@ -677,7 +688,7 @@ function startPan(e) {
 }
 
 function movePan(e) {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
     if (isEditingLocked) return;
     if (e.cancelable) e.preventDefault();
 
@@ -734,7 +745,7 @@ function stopPan() {
 
 // Zoom via Mouse Scroll Wheel
 photoCanvas.addEventListener('wheel', (e) => {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
     e.preventDefault();
     
     const zoomStep = 5;
@@ -835,7 +846,7 @@ btnReset.addEventListener('click', () => {
 });
 
 btnLockImage.addEventListener('click', () => {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
     toggleImageLock(!isEditingLocked);
 });
 
@@ -881,18 +892,36 @@ function updateCanvasDimensions() {
     dropZone.style.aspectRatio = `${canvasWidth} / ${canvasHeight}`;
 
     // Manage visibility of the Frente/Reverso tabs and Multicédula manager card
-    if (activePreset === 'cedula') {
+    if (activePreset === 'cedula' || activePreset === 'intt') {
         cedulaTabsContainer.style.display = 'flex';
-        cedulaManagerCard.style.display = 'flex';
-        // Auto-select template 'cedula_single' if no template selected or if we switch to Cédula
-        if (!printTemplateSelect.value.startsWith('cedula_') && printTemplateSelect.value !== 'multicedula') {
-            printTemplateSelect.value = 'cedula_single';
+        
+        // Dynamically change tab text and icons based on preset
+        if (activePreset === 'intt') {
+            tabFrente.innerHTML = `<i class="fa-solid fa-user-tie"></i> Foto Carnet`;
+            tabReverso.innerHTML = `<i class="fa-solid fa-camera-retro"></i> Selfie + Cédula`;
+            cedulaManagerCard.style.display = 'none';
+        } else {
+            tabFrente.innerHTML = `<i class="fa-solid fa-id-card"></i> Anverso (Frente)`;
+            tabReverso.innerHTML = `<i class="fa-solid fa-id-card-clip"></i> Reverso (Dorso)`;
+            cedulaManagerCard.style.display = 'flex';
         }
-        renderCedulaListUI();
+
+        if (activePreset === 'cedula') {
+            // Auto-select template 'cedula_single' if no template selected or if we switch to Cédula
+            if (!printTemplateSelect.value.startsWith('cedula_') && printTemplateSelect.value !== 'multicedula') {
+                printTemplateSelect.value = 'cedula_single';
+            }
+            renderCedulaListUI();
+        } else {
+            // If leaving Cédula preset, switch back to 'single' template
+            if (printTemplateSelect.value.startsWith('cedula_') || printTemplateSelect.value === 'multicedula') {
+                printTemplateSelect.value = 'single';
+            }
+        }
     } else {
         cedulaTabsContainer.style.display = 'none';
         cedulaManagerCard.style.display = 'none';
-        // If leaving Cédula preset, switch back to 'single' template
+        // If leaving Cédula/INTT preset, switch back to 'single' template
         if (printTemplateSelect.value.startsWith('cedula_') || printTemplateSelect.value === 'multicedula') {
             printTemplateSelect.value = 'single';
         }
@@ -939,12 +968,16 @@ function updateCanvasDimensions() {
         chinLine.style.top = '70%';
     }
 
-    // Hide oval guide in Cédula mode as it doesn't represent a portrait face photo
-    if (activePreset === 'cedula') {
+    // Hide oval guide in Cédula mode or INTT Selfie + Cédula tab
+    if (activePreset === 'cedula' || (activePreset === 'intt' && activeSide === 'reverso')) {
         oval.style.display = 'none';
         eyeLine.style.display = 'none';
         chinLine.style.display = 'none';
-        document.querySelector('.guide-instruction').style.display = 'none';
+        if (activePreset === 'cedula') {
+            document.querySelector('.guide-instruction').style.display = 'none';
+        } else {
+            document.querySelector('.guide-instruction').style.display = 'block';
+        }
     } else {
         oval.style.display = 'block';
         eyeLine.style.display = 'block';
@@ -952,7 +985,9 @@ function updateCanvasDimensions() {
         document.querySelector('.guide-instruction').style.display = 'block';
     }
 
-    const currentImg = (activePreset === 'cedula' && activeSide === 'reverso') ? reversoImage : originalImage;
+    updateGuideInstruction();
+
+    const currentImg = getActiveImage();
     if (currentImg) {
         calculateInitialFit();
         renderCanvas();
@@ -960,6 +995,28 @@ function updateCanvasDimensions() {
         renderCanvas();
     }
     adjustMobilePadding();
+}
+
+function updateGuideInstruction() {
+    if (!guideInstruction) return;
+    
+    if (activePreset === 'pasaporte') {
+        guideInstruction.textContent = "Alinea los ojos y la barbilla aquí (1:1)";
+    } else if (activePreset === 'carnet') {
+        guideInstruction.textContent = "Alinea tu rostro y hombros aquí (3:4)";
+    } else if (activePreset === 'intt') {
+        if (activeSide === 'frente') {
+            guideInstruction.textContent = "INTT Foto Carnet: fondo blanco (448x336)";
+        } else {
+            guideInstruction.textContent = "INTT Selfie: sostén tu Cédula al lado (448x336)";
+        }
+    } else if (activePreset === 'cedula') {
+        if (activeSide === 'frente') {
+            guideInstruction.textContent = "Cédula: Anverso (Frente)";
+        } else {
+            guideInstruction.textContent = "Cédula: Reverso (Dorso)";
+        }
+    }
 }
 
 // Orientation Switches listeners
@@ -990,11 +1047,11 @@ function handleOrientationChange(orient) {
         presetCarnet.setAttribute('data-h', '800');
         presetCarnet.querySelector('.dims-label').textContent = '600 x 800 px (3:4)';
 
-        // Preset Alt vertical: 336x448
-        presetAlt.setAttribute('data-w', '336');
-        presetAlt.setAttribute('data-h', '448');
+        // Preset Alt is ALWAYS horizontal 448x336 per official INTT specifications
+        presetAlt.setAttribute('data-w', '448');
+        presetAlt.setAttribute('data-h', '336');
         presetAlt.querySelector('strong').textContent = 'Digital INTT';
-        presetAlt.querySelector('.dims-label').textContent = '336 x 448 px (3:4)';
+        presetAlt.querySelector('.dims-label').textContent = '448 x 336 px (4:3)';
 
         // Preset Cédula vertical: 673x1004
         presetCedula.setAttribute('data-w', '673');
@@ -1089,6 +1146,7 @@ function switchCedulaSide(side) {
         fileInfoBar.style.display = 'none';
     }
 
+    updateGuideInstruction();
     updatePerspectiveButtonUI();
     renderCanvas();
 }
@@ -1293,7 +1351,7 @@ function updateTemplateDescription() {
 
 // Live Dynamic Mini-Paper Previsualizer Sheet
 function updatePaperPreview() {
-    if (!originalImage) {
+    if (!getActiveImage()) {
         paperSheet.innerHTML = '<div class="paper-thumb-empty"></div>';
         return;
     }
@@ -1746,7 +1804,8 @@ function compilePrintSheet() {
 
 // Download / Export Trigger with loading animations
 btnDownload.addEventListener('click', () => {
-    if (!originalImage) return;
+    const activeImg = (activeSide === 'frente') ? originalImage : reversoImage;
+    if (!activeImg) return;
     
     // Add visual click animation
     btnDownload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compilando Plantilla...';
@@ -1765,7 +1824,13 @@ btnDownload.addEventListener('click', () => {
             
             const mode = printTemplateSelect.value;
             if (mode === 'single') {
-                downloadLink.download = `foto_carnet_unica_${canvasWidth}x${canvasHeight}.jpg`;
+                if (activePreset === 'intt') {
+                    downloadLink.download = (activeSide === 'frente') ? 'intt_foto_carnet_448x336.jpg' : 'intt_selfie_cedula_448x336.jpg';
+                } else if (activePreset === 'cedula') {
+                    downloadLink.download = (activeSide === 'frente') ? 'cedula_venezolana_frente_1004x673.jpg' : 'cedula_venezolana_reverso_1004x673.jpg';
+                } else {
+                    downloadLink.download = `foto_carnet_unica_${canvasWidth}x${canvasHeight}.jpg`;
+                }
             } else if (mode === '4x6') {
                 downloadLink.download = `pliego_impresion_4x6_${canvasWidth}x${canvasHeight}.jpg`;
             } else if (mode === 'a4') {
@@ -1988,7 +2053,7 @@ function formatBytes(bytes) {
 
 // Live estimated export size calculation
 function updateExportSizeInfo() {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
 
     const qualitySetting = parseInt(sliderQuality.value) / 100;
     const mode = printTemplateSelect.value;
@@ -2124,7 +2189,7 @@ function stopWebcam() {
     webcamControls.style.display = 'none';
     if (btnWebcamTimer) btnWebcamTimer.style.display = 'flex';
 
-    if (!originalImage) {
+    if (!getActiveImage()) {
         emptyState.style.display = 'flex';
         photoCanvas.style.display = 'none';
         guideOverlay.style.display = 'none';
@@ -2332,14 +2397,20 @@ function handleDeviceOrientation(event) {
     let beta = event.beta || 0;
     let gamma = event.gamma || 0;
 
-    // A phone lying flat has beta ~ 0 and gamma ~ 0.
-    // Map a tilt of ±15 degrees to our 120px ring container.
-    // Circle container diameter is 120px, bubble is 22px, so maximum visual translation offset is ~45px.
+    // Determine target beta orientation: 90° (upright vertical) for face photos, 0° (flat scanner) for document scans
+    const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
+    const targetBeta = isPortraitPreset ? 90 : 0;
+
+    // Calculate deviations from target orientation
+    const devX = gamma;
+    const devY = beta - targetBeta;
+
+    // Map a tilt deviation of ±15 degrees to our 120px ring container.
     const maxTilt = 15;
     const maxOffset = 45; // pixel translation limit
 
-    let offsetX = (gamma / maxTilt) * maxOffset;
-    let offsetY = (beta / maxTilt) * maxOffset;
+    let offsetX = (devX / maxTilt) * maxOffset;
+    let offsetY = (devY / maxTilt) * maxOffset;
 
     // Constrain bubble translation inside the circular boundary
     const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
@@ -2348,26 +2419,58 @@ function handleDeviceOrientation(event) {
         offsetY = (offsetY / distance) * maxOffset;
     }
 
-    // Apply translation
-    levelingBubble.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    // Apply translations and rendering based on the alignment mode
+    if (isPortraitPreset) {
+        // Vertical Mode: Display flight-style Artificial Horizon
+        levelingBubble.style.display = 'none';
+        levelingHorizonLine.style.display = 'block';
+        levelingHorizonBar.style.display = 'block';
 
-    // Calculate total tilt angle deviation from flat parallelism
-    const tiltAngle = Math.sqrt(beta * beta + gamma * gamma);
+        // Constrain the translation offset
+        let transY = -(devY / maxTilt) * maxOffset;
+        transY = Math.max(-maxOffset, Math.min(maxOffset, transY));
+
+        // Apply rotation (roll) and translation (pitch)
+        levelingHorizonBar.style.transform = `translateY(${transY}px) rotate(${-devX}deg)`;
+    } else {
+        // Flat Scanner Mode: Display standard Circular Bubble Level
+        levelingBubble.style.display = 'block';
+        levelingHorizonLine.style.display = 'none';
+        levelingHorizonBar.style.display = 'none';
+
+        levelingBubble.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
+
+    // Calculate total tilt angle deviation from the target orientation
+    const tiltAngle = Math.sqrt(devX * devX + devY * devY);
 
     // Apply snap tolerance of 3 degrees
-    if (Math.abs(beta) <= 3 && Math.abs(gamma) <= 3) {
+    if (Math.abs(devY) <= 3 && Math.abs(devX) <= 3) {
         // Parallel! Snap to absolute center and change colors to premium emerald
-        levelingBubble.style.transform = "translate(0px, 0px)";
-        levelingBubble.classList.add('aligned');
+        if (isPortraitPreset) {
+            levelingHorizonBar.style.transform = "translateY(0px) rotate(0deg)";
+            levelingHorizonBar.style.background = 'var(--success)';
+            levelingHorizonBar.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.9)';
+        } else {
+            levelingBubble.style.transform = "translate(0px, 0px)";
+            levelingBubble.classList.add('aligned');
+        }
         levelingStatus.classList.add('aligned');
         if (levelingBlurRing) levelingBlurRing.classList.add('aligned');
         levelingStatus.textContent = "Alineado ✓";
     } else {
         // Out of tolerance
-        levelingBubble.classList.remove('aligned');
+        if (isPortraitPreset) {
+            levelingHorizonBar.style.background = '#ef4444';
+            levelingHorizonBar.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.7)';
+        } else {
+            levelingBubble.classList.remove('aligned');
+        }
         levelingStatus.classList.remove('aligned');
         if (levelingBlurRing) levelingBlurRing.classList.remove('aligned');
-        levelingStatus.textContent = `Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;
+        
+        const modeLabel = isPortraitPreset ? "Vertical" : "Plano";
+        levelingStatus.textContent = `${modeLabel} - Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;
     }
 }
 
@@ -2540,7 +2643,7 @@ function updatePerspectiveButtonUI() {
 
 // Toggle Perspective adjustments
 btnPerspectiveWarp.addEventListener('click', () => {
-    if (!originalImage) return;
+    if (!getActiveImage()) return;
 
     if (isPerspectiveAdjustmentActive) {
         // Exit Adjustment Mode (Apply warp)

@@ -49,7 +49,7 @@
                 <div class="welcome-preset-item" data-preset="intt">
                     <div class="preset-icon-circle"><i class="fa-solid fa-address-card"></i></div>
                     <h3>Digital INTT</h3>
-                    <p>Licencia de Tránsito<br>336 x 448 px (3:4)</p>
+                    <p>Licencia de Tránsito<br>448 x 336 px (4:3)</p>
                 </div>
                 <div class="welcome-preset-item" data-preset="cedula">
                     <div class="preset-icon-circle" style="background: rgba(147, 51, 234, 0.15); color: #a855f7;"><i class="fa-solid fa-address-card"></i></div>
@@ -134,11 +134,13 @@
                         
                         <!-- Leveling Bubble Overlay (Parallel Photo Mode) -->
                         <div class="leveling-overlay" id="levelingOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; flex-direction: column; align-items: center; justify-content: center; background: rgba(10, 9, 16, 0.3);">
-                            <div class="leveling-target" style="position: relative; width: 120px; height: 120px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <div class="leveling-target" style="position: relative; width: 120px; height: 120px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                                 <div class="leveling-blur-ring" id="levelingBlurRing"></div>
                                 <div class="leveling-circle-outer" style="position: absolute; width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;"></div>
                                 <div class="leveling-circle-inner" style="position: absolute; width: 12px; height: 12px; border: 1.5px solid var(--primary-hover); border-radius: 50%;"></div>
                                 <div class="leveling-bubble" id="levelingBubble" style="position: absolute; width: 22px; height: 22px; background: #ef4444; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: background 0.2s, transform 0.1s ease-out; transform: translate(0px, 0px);"></div>
+                                <div class="leveling-horizon-line" id="levelingHorizonLine" style="display: none; position: absolute; width: 100%; height: 1.5px; background: rgba(255, 255, 255, 0.25); left: 0; top: 50%; transform: translateY(-50%);"></div>
+                                <div class="leveling-horizon-bar" id="levelingHorizonBar" style="display: none; position: absolute; width: 85%; height: 3px; background: #ef4444; left: 7.5%; top: 50%; margin-top: -1.5px; border-radius: 2px; transition: background-color 0.2s, transform 0.1s ease-out, box-shadow 0.2s; transform: translateY(0px) rotate(0deg); box-shadow: 0 0 10px rgba(239, 68, 68, 0.7); z-index: 2;"></div>
                             </div>
                             <div class="leveling-status" id="levelingStatus" style="font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700; color: white; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 20px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.1);">Calibrando...</div>
                         </div>
@@ -385,11 +387,11 @@
                                 <span class="preset-desc dims-label">600 x 800 px (3:4)</span>
                             </button>
                             
-                            <button class="preset-card" data-preset="intt" data-w="336" data-h="448" id="presetAlt" type="button">
+                            <button class="preset-card" data-preset="intt" data-w="448" data-h="336" id="presetAlt" type="button">
                                 <span class="active-badge">ACTIVE</span>
                                 <i class="fa-solid fa-address-card preset-icon"></i>
                                 <strong class="preset-title">Digital INTT</strong>
-                                <span class="preset-desc dims-label">336 x 448 px (3:4)</span>
+                                <span class="preset-desc dims-label">448 x 336 px (4:3)</span>
                             </button>
 
                             <button class="preset-card" data-preset="cedula" data-w="1004" data-h="673" id="presetCedula" type="button">
