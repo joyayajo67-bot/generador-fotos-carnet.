@@ -2372,6 +2372,11 @@ async function toggleParallelMode(forceState) {
         levelingStatus.classList.remove('aligned');
         if (levelingBlurRing) levelingBlurRing.classList.remove('aligned');
         levelingBubble.style.transform = "translate(0px, 0px)";
+        
+        // Reset calibration parameters for next initialization
+        devOrientationCalibrated = false;
+        smoothedBeta = null;
+        smoothedGamma = null;
     }
 }
 
@@ -2389,21 +2394,78 @@ async function requestDeviceOrientationPermission() {
     return 'ondeviceorientation' in window;
 }
 
+// Calibration offsets for device orientation
+let devOrientationCalibrated = false;
+let devOrientationOffset = { beta: 0, gamma: 0 };
+
+// Filtered values for low-pass smoothing (damping)
+let smoothedBeta = null;
+let smoothedGamma = null;
+const filterFactor = 0.15; // 0.15 gives a smooth, dampened response without lag
+
 function handleDeviceOrientation(event) {
     if (!isParallelActive || !webcamStream) return;
 
-    // beta represents front-to-back tilt in degrees (-180 to 180)
-    // gamma represents left-to-right tilt in degrees (-90 to 90)
-    let beta = event.beta || 0;
-    let gamma = event.gamma || 0;
+    // Raw orientation values in degrees
+    let rawBeta = event.beta || 0;
+    let rawGamma = event.gamma || 0;
+
+    // Handle screen orientation rotation if screen is rotated
+    const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+    
+    // Normalize coordinates based on screen orientation
+    let beta = rawBeta;
+    let gamma = rawGamma;
+    
+    if (screenOrientation === 90) {
+        beta = -rawGamma;
+        gamma = rawBeta;
+    } else if (screenOrientation === -90 || screenOrientation === 270) {
+        beta = rawGamma;
+        gamma = -rawBeta;
+    } else if (screenOrientation === 180) {
+        beta = -rawBeta;
+        gamma = -rawGamma;
+    }
+
+    // Apply auto-calibration on first read if not yet calibrated
+    if (!devOrientationCalibrated) {
+        // Assume default upright target on start
+        const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
+        const defaultTargetBeta = isPortraitPreset ? 90 : 0;
+        
+        // Calibrate offset relative to standard upright or flat targets
+        devOrientationOffset.beta = beta - defaultTargetBeta;
+        devOrientationOffset.gamma = gamma;
+        devOrientationCalibrated = true;
+        
+        // If the initial offset is too high (e.g. > 25°), it might be held weirdly, so discard it to avoid breaking defaults
+        if (Math.abs(devOrientationOffset.beta) > 25 || Math.abs(devOrientationOffset.gamma) > 25) {
+            devOrientationOffset.beta = 0;
+            devOrientationOffset.gamma = 0;
+        }
+    }
+
+    // Apply calibration offset
+    let calBeta = beta - devOrientationOffset.beta;
+    let calGamma = gamma - devOrientationOffset.gamma;
+
+    // Apply low-pass / complementary filter smoothing
+    if (smoothedBeta === null || smoothedGamma === null) {
+        smoothedBeta = calBeta;
+        smoothedGamma = calGamma;
+    } else {
+        smoothedBeta = smoothedBeta + filterFactor * (calBeta - smoothedBeta);
+        smoothedGamma = smoothedGamma + filterFactor * (calGamma - smoothedGamma);
+    }
 
     // Determine target beta orientation: 90° (upright vertical) for face photos, 0° (flat scanner) for document scans
     const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
     const targetBeta = isPortraitPreset ? 90 : 0;
 
     // Calculate deviations from target orientation
-    const devX = gamma;
-    const devY = beta - targetBeta;
+    const devX = smoothedGamma;
+    const devY = smoothedBeta - targetBeta;
 
     // Map a tilt deviation of ±15 degrees to our 120px ring container.
     const maxTilt = 15;
