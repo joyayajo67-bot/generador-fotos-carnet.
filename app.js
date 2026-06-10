@@ -2463,8 +2463,8 @@ function handleDeviceOrientation(event) {
     const devX = smoothedGamma;
     const devY = smoothedBeta - targetBeta;
 
-    // Map a tilt deviation of ±15 degrees to our 120px ring container.
-    const maxTilt = 15;
+    // Use a wider tilt boundary (e.g. ±35 degrees) to make the HUD less sensitive and easier to control
+    const maxTilt = 35;
     const maxOffset = 45; // pixel translation limit
 
     let offsetX = (devX / maxTilt) * maxOffset;
@@ -2488,8 +2488,11 @@ function handleDeviceOrientation(event) {
         let transY = -(devY / maxTilt) * maxOffset;
         transY = Math.max(-maxOffset, Math.min(maxOffset, transY));
 
+        // Scale down rotation angle mapping (e.g. divide by 1.5) to prevent wild, rapid spinning
+        const smoothRotation = -devX / 1.3;
+
         // Apply rotation (roll) and translation (pitch)
-        levelingHorizonBar.style.transform = `translateY(${transY}px) rotate(${-devX}deg)`;
+        levelingHorizonBar.style.transform = `translateY(${transY}px) rotate(${smoothRotation}deg)`;
     } else {
         // Flat Scanner Mode: Display standard Circular Bubble Level
         levelingBubble.style.display = 'block';
@@ -2514,7 +2517,12 @@ function handleDeviceOrientation(event) {
             levelingBubble.classList.add('aligned');
         }
         levelingStatus.classList.add('aligned');
-        if (levelingBlurRing) levelingBlurRing.classList.add('aligned');
+        if (levelingBlurRing) {
+            levelingBlurRing.classList.add('aligned');
+            levelingBlurRing.style.backdropFilter = 'blur(0px)';
+            levelingBlurRing.style.webkitBackdropFilter = 'blur(0px)';
+            levelingBlurRing.style.background = 'rgba(255, 255, 255, 0)';
+        }
         levelingStatus.textContent = "Alineado ✓";
     } else {
         // Out of tolerance
@@ -2525,7 +2533,12 @@ function handleDeviceOrientation(event) {
             levelingBubble.classList.remove('aligned');
         }
         levelingStatus.classList.remove('aligned');
-        if (levelingBlurRing) levelingBlurRing.classList.remove('aligned');
+        if (levelingBlurRing) {
+            levelingBlurRing.classList.remove('aligned');
+            levelingBlurRing.style.backdropFilter = 'blur(8px)';
+            levelingBlurRing.style.webkitBackdropFilter = 'blur(8px)';
+            levelingBlurRing.style.background = 'rgba(255, 255, 255, 0.03)';
+        }
         
         const modeLabel = isPortraitPreset ? "Vertical" : "Plano";
         levelingStatus.textContent = `${modeLabel} - Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;
