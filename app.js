@@ -2430,18 +2430,14 @@ function handleDeviceOrientation(event) {
 
     // Apply auto-calibration on first read if not yet calibrated
     if (!devOrientationCalibrated) {
-        // Assume default upright target on start
-        const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
-        const defaultTargetBeta = isPortraitPreset ? 90 : 0;
-        
-        // Calibrate offset relative to standard upright or flat targets
-        devOrientationOffset.beta = beta - defaultTargetBeta;
+        // We want pitch (beta) to target strictly 90 degrees vertical (or 0 degrees flat), so we do not offset beta.
+        // We only calibrate gamma (roll) to compensate for minor left-to-right user tilt.
+        devOrientationOffset.beta = 0;
         devOrientationOffset.gamma = gamma;
         devOrientationCalibrated = true;
         
-        // If the initial offset is too high (e.g. > 25°), it might be held weirdly, so discard it to avoid breaking defaults
-        if (Math.abs(devOrientationOffset.beta) > 25 || Math.abs(devOrientationOffset.gamma) > 25) {
-            devOrientationOffset.beta = 0;
+        // If the initial offset is too high (e.g. > 25°), discard it to avoid breaking defaults
+        if (Math.abs(devOrientationOffset.gamma) > 25) {
             devOrientationOffset.gamma = 0;
         }
     }
