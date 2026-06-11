@@ -2401,7 +2401,7 @@ let devOrientationOffset = { beta: 0, gamma: 0 };
 // Filtered values for low-pass smoothing (damping)
 let smoothedBeta = null;
 let smoothedGamma = null;
-const filterFactor = 0.15; // 0.15 gives a smooth, dampened response without lag
+const filterFactor = 0.08; // 0.08 provides heavier smoothing (damping) for high stability
 
 function handleDeviceOrientation(event) {
     if (!isParallelActive || !webcamStream) return;
@@ -2488,8 +2488,8 @@ function handleDeviceOrientation(event) {
         let transY = -(devY / maxTilt) * maxOffset;
         transY = Math.max(-maxOffset, Math.min(maxOffset, transY));
 
-        // Scale down rotation angle mapping (e.g. divide by 1.5) to prevent wild, rapid spinning
-        const smoothRotation = -devX / 1.3;
+        // Scale down rotation angle mapping dramatically (divide by 3.0) to prevent wild spinning
+        const smoothRotation = -devX / 3.0;
 
         // Apply rotation (roll) and translation (pitch)
         levelingHorizonBar.style.transform = `translateY(${transY}px) rotate(${smoothRotation}deg)`;
