@@ -2526,8 +2526,11 @@ function handleDeviceOrientation(event) {
     // Calculate total tilt angle deviation from the target orientation
     const tiltAngle = Math.sqrt(devX * devX + devY * devY);
 
-    // Apply snap tolerance of 3 degrees
-    if (Math.abs(devY) <= 3 && Math.abs(devX) <= 3) {
+    // Apply snap tolerance: 15% of max range for portrait (15% of 35° = 5.25°), or 3° for flat scanner
+    const toleranceX = isPortraitPreset ? (maxTilt * 0.15) : 3;
+    const toleranceY = isPortraitPreset ? (maxTilt * 0.15) : 3;
+
+    if (Math.abs(devY) <= toleranceY && Math.abs(devX) <= toleranceX) {
         // Parallel! Snap to absolute center and change colors to premium emerald
         if (isPortraitPreset) {
             levelingHorizonBar.style.transform = "translateY(0px) rotate(0deg)";
@@ -2550,7 +2553,8 @@ function handleDeviceOrientation(event) {
         levelingStatus.classList.remove('aligned');
         
         const modeLabel = isPortraitPreset ? "Vertical" : "Plano";
-        levelingStatus.textContent = `${modeLabel} - Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;
+        const toleranceText = isPortraitPreset ? "Tolerancia: 15%" : "Tolerancia: 3°";
+        levelingStatus.textContent = `${modeLabel} - Inclinación: ${Math.round(tiltAngle)}° (${toleranceText})`;
     }
 }
 
