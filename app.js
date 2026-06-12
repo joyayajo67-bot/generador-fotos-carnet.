@@ -2397,11 +2397,12 @@ async function requestDeviceOrientationPermission() {
 // Calibration offsets for device orientation
 let devOrientationCalibrated = false;
 let devOrientationOffset = { beta: 0, gamma: 0 };
+let dynamicTargetBeta = 90; // Default vertical target (degrees)
 
 // Filtered values for low-pass smoothing (damping)
 let smoothedBeta = null;
 let smoothedGamma = null;
-const filterFactor = 0.08; // 0.08 provides heavier smoothing (damping) for high stability
+const filterFactor = 0.05; // 0.05 provides very heavy, stable smoothing (highly dampened)
 
 function handleDeviceOrientation(event) {
     if (!isParallelActive || !webcamStream) return;
@@ -2430,13 +2431,28 @@ function handleDeviceOrientation(event) {
 
     // Apply auto-calibration on first read if not yet calibrated
     if (!devOrientationCalibrated) {
-        // We want pitch (beta) to target strictly 90 degrees vertical (or 0 degrees flat), so we do not offset beta.
-        // We only calibrate gamma (roll) to compensate for minor left-to-right user tilt.
-        devOrientationOffset.beta = 0;
+        const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
+        
+        if (isPortraitPreset) {
+            // Auto-detect if the device outputs 90 or ~0/15 degrees when held upright
+            if (Math.abs(beta) < 30) {
+                dynamicTargetBeta = 0; // Device uses 0° as vertical
+            } else if (Math.abs(beta - 90) < 30) {
+                dynamicTargetBeta = 90; // Device uses 90° as vertical
+            } else {
+                dynamicTargetBeta = beta; // Fallback: Calibrate vertical target to current tilt
+            }
+            devOrientationOffset.beta = 0; // Absolute target set above
+        } else {
+            // Document scanning: target is flat on table (0 degrees)
+            dynamicTargetBeta = 0;
+            devOrientationOffset.beta = beta; 
+        }
+        
         devOrientationOffset.gamma = gamma;
         devOrientationCalibrated = true;
         
-        // If the initial offset is too high (e.g. > 25°), discard it to avoid breaking defaults
+        // Discard extreme gamma offset calibration
         if (Math.abs(devOrientationOffset.gamma) > 25) {
             devOrientationOffset.gamma = 0;
         }
@@ -2455,15 +2471,13 @@ function handleDeviceOrientation(event) {
         smoothedGamma = smoothedGamma + filterFactor * (calGamma - smoothedGamma);
     }
 
-    // Determine target beta orientation: 90° (upright vertical) for face photos, 0° (flat scanner) for document scans
     const isPortraitPreset = (activePreset === 'pasaporte' || activePreset === 'carnet' || activePreset === 'intt');
-    const targetBeta = isPortraitPreset ? 90 : 0;
 
     // Calculate deviations from target orientation
     const devX = smoothedGamma;
-    const devY = smoothedBeta - targetBeta;
+    const devY = smoothedBeta - dynamicTargetBeta;
 
-    // Use a wider tilt boundary (e.g. ±35 degrees) to make the HUD less sensitive and easier to control
+    // Use a wider tilt boundary (±35 degrees) to make the HUD less sensitive and easier to control
     const maxTilt = 35;
     const maxOffset = 45; // pixel translation limit
 
@@ -2477,6 +2491,13 @@ function handleDeviceOrientation(event) {
         offsetY = (offsetY / distance) * maxOffset;
     }
 
+    // Hide the concentric blur ring completely at all times (as requested)
+    if (levelingBlurRing) {
+        levelingBlurRing.style.display = 'none';
+        levelingBlurRing.style.backdropFilter = 'none';
+        levelingBlurRing.style.webkitBackdropFilter = 'none';
+    }
+
     // Apply translations and rendering based on the alignment mode
     if (isPortraitPreset) {
         // Vertical Mode: Display flight-style Artificial Horizon
@@ -2488,8 +2509,8 @@ function handleDeviceOrientation(event) {
         let transY = -(devY / maxTilt) * maxOffset;
         transY = Math.max(-maxOffset, Math.min(maxOffset, transY));
 
-        // Scale down rotation angle mapping dramatically (divide by 3.0) to prevent wild spinning
-        const smoothRotation = -devX / 3.0;
+        // Scale down rotation angle mapping dramatically (divide by 12.0) to prevent wild spinning
+        const smoothRotation = -devX / 12.0;
 
         // Apply rotation (roll) and translation (pitch)
         levelingHorizonBar.style.transform = `translateY(${transY}px) rotate(${smoothRotation}deg)`;
@@ -2517,12 +2538,6 @@ function handleDeviceOrientation(event) {
             levelingBubble.classList.add('aligned');
         }
         levelingStatus.classList.add('aligned');
-        if (levelingBlurRing) {
-            levelingBlurRing.classList.add('aligned');
-            levelingBlurRing.style.backdropFilter = 'blur(0px)';
-            levelingBlurRing.style.webkitBackdropFilter = 'blur(0px)';
-            levelingBlurRing.style.background = 'rgba(255, 255, 255, 0)';
-        }
         levelingStatus.textContent = "Alineado ✓";
     } else {
         // Out of tolerance
@@ -2533,12 +2548,6 @@ function handleDeviceOrientation(event) {
             levelingBubble.classList.remove('aligned');
         }
         levelingStatus.classList.remove('aligned');
-        if (levelingBlurRing) {
-            levelingBlurRing.classList.remove('aligned');
-            levelingBlurRing.style.backdropFilter = 'blur(8px)';
-            levelingBlurRing.style.webkitBackdropFilter = 'blur(8px)';
-            levelingBlurRing.style.background = 'rgba(255, 255, 255, 0.03)';
-        }
         
         const modeLabel = isPortraitPreset ? "Vertical" : "Plano";
         levelingStatus.textContent = `${modeLabel} - Inclinación: ${Math.round(tiltAngle)}° (Tolerancia: 3°)`;

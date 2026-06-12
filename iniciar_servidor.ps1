@@ -12,32 +12,76 @@ $started = $false
 $accessWarning = $false
 $listener = $null
 
+# Generar y configurar un Certificado de Firma de Desarrollo para HTTPS local si se es Administrador
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$usingHttps = $false
+
+if ($isAdmin) {
+    try {
+        Write-Host "Configurando certificado SSL de desarrollo para HTTPS..." -ForegroundColor Yellow
+        $certSubject = "CN=GeneradorFotosCarnetDev"
+        $certStorePath = "Cert:\LocalMachine\My"
+        
+        # Buscar si ya existe el certificado
+        $cert = Get-ChildItem -Path $certStorePath | Where-Object { $_.Subject -eq $certSubject } | Select-Object -First 1
+        if (-not $cert) {
+            $cert = New-SelfSignedCertificate -DnsName "localhost", $localIp, "127.0.0.1" -CertStoreLocation $certStorePath -FriendlyName "Generador Fotos Carnet Dev SSL" -Subject $certSubject -KeyLength 2048 -NotAfter (Get-Date).AddYears(3)
+            # Agregar a Entidades de confianza para evitar alertas de seguridad en la PC
+            Export-Certificate -Cert $cert -FilePath "$env:TEMP\devCert.cer" | Out-Null
+            Import-Certificate -FilePath "$env:TEMP\devCert.cer" -CertStoreLocation "Cert:\CurrentUser\Root" | Out-Null
+            Remove-Item "$env:TEMP\devCert.cer" -Force -ErrorAction SilentlyContinue
+        }
+        
+        $certHash = $cert.Thumbprint
+        $appId = "{4ae5a05b-8c67-4d94-a1df-3323fb3fb7c3}"
+
+        # Eliminar cualquier asociación de puerto HTTPS SSL previa en el puerto 8080
+        netsh http delete sslcert ipport=0.0.0.0:$port 2>&1 | Out-Null
+        netsh http delete sslcert ipport=[::]:$port 2>&1 | Out-Null
+        
+        # Asociar el nuevo certificado al puerto
+        netsh http add sslcert ipport=0.0.0.0:$port certhash=$certHash appid=$appId 2>&1 | Out-Null
+        $usingHttps = $true
+    } catch {
+        Write-Host "Aviso: No se pudo enlazar el certificado SSL. Usando HTTP estándar de respaldo." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "Nota: Ejecuta el servidor como Administrador para habilitar HTTPS de forma segura y usar la cámara en tu celular." -ForegroundColor DarkYellow
+}
+
+$protocol = if ($usingHttps) { "https" } else { "http" }
+
+# Creamos los prefijos de URL usando concatenación limpia para evitar errores de interpretación de variables en PowerShell
+$urlLocalhost = $protocol + "://localhost:" + $port + "/"
+$urlLoopback = $protocol + "://127.0.0.1:" + $port + "/"
+$urlIp = $protocol + "://" + $localIp + ":" + $port + "/"
+
 while (-not $started -and $port -le 8180) {
-    # Crear una nueva instancia de HttpListener en cada intento para evitar estados de error
     $listener = New-Object System.Net.HttpListener
     try {
-        $listener.Prefixes.Add("http://localhost:$port/")
-        $listener.Prefixes.Add("http://127.0.0.1:$port/")
+        $listener.Prefixes.Add($urlLocalhost)
+        $listener.Prefixes.Add($urlLoopback)
         if ($localIp -ne "127.0.0.1") {
-            $listener.Prefixes.Add("http://$($localIp):$port/")
+            $listener.Prefixes.Add($urlIp)
         }
         $listener.Start()
         $started = $true
     } catch {
-        # Si falla (por ejemplo, restricción de administrador al usar la IP local),
-        # cerramos este listener e intentamos solo con localhost.
         $listener.Close()
         $listener = New-Object System.Net.HttpListener
         try {
-            $listener.Prefixes.Add("http://localhost:$port/")
-            $listener.Prefixes.Add("http://127.0.0.1:$port/")
+            $listener.Prefixes.Add($urlLocalhost)
+            $listener.Prefixes.Add($urlLoopback)
             $listener.Start()
             $started = $true
             $accessWarning = $true
         } catch {
-            # Si también falla, el puerto está realmente ocupado. Cerramos y probamos el siguiente puerto.
             $listener.Close()
             $port++
+            # Actualizar URLs si cambia el puerto
+            $urlLocalhost = $protocol + "://localhost:" + $port + "/"
+            $urlLoopback = $protocol + "://127.0.0.1:" + $port + "/"
+            $urlIp = $protocol + "://" + $localIp + ":" + $port + "/"
         }
     }
 }
@@ -49,7 +93,6 @@ if (-not $started) {
 }
 
 # Intentar abrir el puerto en el Firewall de Windows si se está ejecutando como Administrador
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if ($isAdmin -and -not $accessWarning) {
     try {
         $ruleName = "GeneradorFotosCarnet_Port_$port"
@@ -57,28 +100,38 @@ if ($isAdmin -and -not $accessWarning) {
             New-NetFirewallRule -DisplayName "Generador de Fotos Carnet IA ($port)" -Name $ruleName -Direction Inbound -LocalPort $port -Protocol TCP -Action Allow -ErrorAction SilentlyContinue | Out-Null
         }
     } catch {
-        # Ignorar fallos si las políticas de red bloquean la configuración
+        # Ignorar
     }
 }
 
 Clear-Host
 Write-Host "==================================================================" -ForegroundColor Magenta
-Write-Host "    SERVIDOR LOCAL ACTIVO (NATIVO DE WINDOWS)" -ForegroundColor Cyan -Bold
-Write-Host "==================================================================" -ForegroundColor Magenta
-Write-Host "Tu servidor local está corriendo correctamente sin dependencias." -ForegroundColor Gray
-Write-Host ""
-Write-Host "Para entrar desde este computador:" -ForegroundColor Gray
-Write-Host "  -> http://localhost:$port" -ForegroundColor Green -Bold
-Write-Host ""
-Write-Host "Para entrar desde tu TELÉFONO CELULAR (conectado al mismo Wi-Fi):" -ForegroundColor Gray
-if ($accessWarning) {
-    Write-Host "  [BLOQUEADO] - Para habilitar el acceso móvil, haz clic derecho sobre 'iniciar_servidor.bat' y selecciona 'Ejecutar como Administrador'." -ForegroundColor Red
-    Write-Host "  (Actualmente el servidor está corriendo solo de forma local en tu PC)" -ForegroundColor Yellow
+if ($usingHttps) {
+    Write-Host "    SERVIDOR LOCAL SEGURO ACTIVO (HTTPS NATIVO)" -ForegroundColor Green -Bold
 } else {
-    Write-Host "  -> http://$($localIp):$port" -ForegroundColor Green -Bold
+    Write-Host "    SERVIDOR LOCAL ACTIVO (HTTP - CÁMARA SOLO EN PC)" -ForegroundColor Cyan -Bold
 }
 Write-Host "==================================================================" -ForegroundColor Magenta
-Write-Host "Mantén esta ventana abierta para seguir usando la app. Ciérrala para apagar el servidor." -ForegroundColor Yellow
+Write-Host "Servidor en tiempo real para desarrollo rápido." -ForegroundColor Gray
+Write-Host ""
+Write-Host "Para entrar desde este computador:" -ForegroundColor Gray
+Write-Host ("  -> " + $protocol + "://localhost:" + $port) -ForegroundColor Green -Bold
+Write-Host ""
+Write-Host "Para entrar desde tu TELÉFONO CELULAR (conectado al mismo Wi-Fi):" -ForegroundColor Gray
+if ($accessWarning -or -not $usingHttps) {
+    Write-Host "  [ALERTA DE SEGURIDAD] - Para habilitar la cámara en el teléfono:" -ForegroundColor Red
+    Write-Host "  1. Cierra el servidor." -ForegroundColor Yellow
+    Write-Host "  2. Haz clic derecho sobre 'iniciar_servidor.bat' y selecciona 'Ejecutar como Administrador'." -ForegroundColor Yellow
+    Write-Host "  (Actualmente el servidor corre en HTTP y la cámara del celular será bloqueada)." -ForegroundColor Red
+} else {
+    Write-Host ("  -> https://" + $localIp + ":" + $port) -ForegroundColor Green -Bold
+    Write-Host ""
+    Write-Host "  * NOTA: Al entrar la primera vez en el celular, verás un mensaje de 'Conexión no privada'." -ForegroundColor DarkYellow
+    Write-Host "    Simplemente pulsa 'Configuración Avanzada' y luego 'Acceder a $localIp (sitio no seguro)'." -ForegroundColor Yellow
+    Write-Host "    ¡Esto activará la cámara local de forma segura e instantánea!" -ForegroundColor Green
+}
+Write-Host "==================================================================" -ForegroundColor Magenta
+Write-Host "Cualquier cambio que guardes en los archivos se verá al recargar la página en el celular." -ForegroundColor Gray
 Write-Host ""
 
 # Bucle del servidor para despachar peticiones
@@ -124,6 +177,6 @@ while ($listener.IsListening) {
         }
         $response.OutputStream.Close()
     } catch {
-        # Control silencioso de cortes de conexión en segundo plano
+        # Control silencioso
     }
 }
