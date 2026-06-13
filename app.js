@@ -850,23 +850,78 @@ btnLockImage.addEventListener('click', () => {
     toggleImageLock(!isEditingLocked);
 });
 
-btnRotateLeft.addEventListener('click', () => {
-    let r = state.rotate - 90;
-    if (r < -180) r += 360;
-    state.rotate = r;
+// Helper function to safely update and normalize rotate state value
+function updateRotationState(amount) {
+    let r = state.rotate + amount;
+    // Normalize to keep within [-180, 180]
+    while (r > 180) r -= 360;
+    while (r < -180) r += 360;
+    state.rotate = Math.round(r);
     sliderRotate.value = state.rotate;
     numRotate.value = state.rotate;
     renderCanvas();
-});
+}
 
-btnRotateRight.addEventListener('click', () => {
-    let r = state.rotate + 90;
-    if (r > 180) r -= 360;
-    state.rotate = r;
-    sliderRotate.value = state.rotate;
-    numRotate.value = state.rotate;
-    renderCanvas();
-});
+// Configurable timing thresholds for premium interaction
+const ROTATION_TAP_TIMEOUT_MS = 250;
+const ROTATION_STEP_INTERVAL_MS = 60;
+
+function setupPremiumRotationButton(btn, degreeDelta) {
+    let rotationTimer = null;
+    let rotationInterval = null;
+    let pressStartTime = 0;
+    let hasTriggeredInterval = false;
+
+    const startPress = (e) => {
+        if (!getActiveImage()) return;
+        e.preventDefault();
+        pressStartTime = Date.now();
+        hasTriggeredInterval = false;
+
+        // Clean up any stray timers
+        clearTimeout(rotationTimer);
+        clearInterval(rotationInterval);
+
+        // Schedule degree-by-degree continuous rotation if held down
+        rotationTimer = setTimeout(() => {
+            hasTriggeredInterval = true;
+            rotationInterval = setInterval(() => {
+                updateRotationState(degreeDelta > 0 ? 1 : -1);
+            }, ROTATION_STEP_INTERVAL_MS);
+        }, ROTATION_TAP_TIMEOUT_MS);
+    };
+
+    const endPress = (e) => {
+        e.preventDefault();
+        clearTimeout(rotationTimer);
+        clearInterval(rotationInterval);
+
+        const pressDuration = Date.now() - pressStartTime;
+        if (!hasTriggeredInterval && pressDuration < ROTATION_TAP_TIMEOUT_MS) {
+            // Quick tap! Rotate 90 degrees
+            updateRotationState(degreeDelta);
+        }
+    };
+
+    const cancelPress = () => {
+        clearTimeout(rotationTimer);
+        clearInterval(rotationInterval);
+    };
+
+    // Mouse events
+    btn.addEventListener('mousedown', startPress);
+    btn.addEventListener('mouseup', endPress);
+    btn.addEventListener('mouseleave', cancelPress);
+
+    // Touch events (mobile responsive)
+    btn.addEventListener('touchstart', startPress, { passive: false });
+    btn.addEventListener('touchend', endPress, { passive: false });
+    btn.addEventListener('touchcancel', cancelPress, { passive: false });
+}
+
+// Initialize rotation buttons with respective 90 degree offsets
+setupPremiumRotationButton(btnRotateLeft, -90);
+setupPremiumRotationButton(btnRotateRight, 90);
 
 btnMirror.addEventListener('click', () => {
     state.mirror = !state.mirror;
