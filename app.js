@@ -1044,11 +1044,11 @@ function updateCanvasDimensions() {
         chinLine.style.display = 'none';
         if (guideSilhouette) {
             guideSilhouette.style.display = 'block';
-            // Adjust silhouette margins slightly for the 4:3 aspect ratio
-            guideSilhouette.style.top = '5%';
-            guideSilhouette.style.left = '15%';
-            guideSilhouette.style.width = '70%';
-            guideSilhouette.style.height = '85%';
+            // Scale up the silhouette to better fit head & shoulders in 4:3 format
+            guideSilhouette.style.top = '-2%';
+            guideSilhouette.style.left = '10%';
+            guideSilhouette.style.width = '80%';
+            guideSilhouette.style.height = '98%';
         }
         document.querySelector('.guide-instruction').style.display = 'block';
     } else {
