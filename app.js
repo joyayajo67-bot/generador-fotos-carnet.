@@ -1023,20 +1023,40 @@ function updateCanvasDimensions() {
         chinLine.style.top = '70%';
     }
 
+    const guideSilhouette = document.getElementById('guideSilhouette');
+
     // Hide oval guide in Cédula mode or INTT Selfie + Cédula tab
     if (activePreset === 'cedula' || (activePreset === 'intt' && activeSide === 'reverso')) {
         oval.style.display = 'none';
         eyeLine.style.display = 'none';
         chinLine.style.display = 'none';
+        if (guideSilhouette) guideSilhouette.style.display = 'none';
+        
         if (activePreset === 'cedula') {
             document.querySelector('.guide-instruction').style.display = 'none';
         } else {
             document.querySelector('.guide-instruction').style.display = 'block';
         }
+    } else if (activePreset === 'intt' && activeSide === 'frente') {
+        // INTT Foto Carnet: Show head & shoulders silhouette instead of the passport oval
+        oval.style.display = 'none';
+        eyeLine.style.display = 'none';
+        chinLine.style.display = 'none';
+        if (guideSilhouette) {
+            guideSilhouette.style.display = 'block';
+            // Adjust silhouette margins slightly for the 4:3 aspect ratio
+            guideSilhouette.style.top = '5%';
+            guideSilhouette.style.left = '15%';
+            guideSilhouette.style.width = '70%';
+            guideSilhouette.style.height = '85%';
+        }
+        document.querySelector('.guide-instruction').style.display = 'block';
     } else {
+        // Normal preset (Carnet/Pasaporte): Show standard oval
         oval.style.display = 'block';
         eyeLine.style.display = 'block';
         chinLine.style.display = 'block';
+        if (guideSilhouette) guideSilhouette.style.display = 'none';
         document.querySelector('.guide-instruction').style.display = 'block';
     }
 
