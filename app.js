@@ -1025,30 +1025,25 @@ function updateCanvasDimensions() {
 
     const guideSilhouette = document.getElementById('guideSilhouette');
 
-    // Hide oval guide in Cédula mode or INTT Selfie + Cédula tab
-    if (activePreset === 'cedula' || (activePreset === 'intt' && activeSide === 'reverso')) {
+    // Hide oval guide in Cédula mode
+    if (activePreset === 'cedula') {
         oval.style.display = 'none';
         eyeLine.style.display = 'none';
         chinLine.style.display = 'none';
         if (guideSilhouette) guideSilhouette.style.display = 'none';
-        
-        if (activePreset === 'cedula') {
-            document.querySelector('.guide-instruction').style.display = 'none';
-        } else {
-            document.querySelector('.guide-instruction').style.display = 'block';
-        }
-    } else if (activePreset === 'intt' && activeSide === 'frente') {
-        // INTT Foto Carnet: Show head & shoulders silhouette instead of the passport oval
+        document.querySelector('.guide-instruction').style.display = 'none';
+    } else if (activePreset === 'intt') {
+        // INTT (Both Foto Carnet and Selfie): Show head & shoulders silhouette instead of the passport oval
         oval.style.display = 'none';
         eyeLine.style.display = 'none';
         chinLine.style.display = 'none';
         if (guideSilhouette) {
             guideSilhouette.style.display = 'block';
-            // Scale up the silhouette to better fit head & shoulders in 4:3 format
-            guideSilhouette.style.top = '-2%';
-            guideSilhouette.style.left = '10%';
-            guideSilhouette.style.width = '80%';
-            guideSilhouette.style.height = '98%';
+            // Scale up the silhouette dramatically to fit the 4:3 canvas properly
+            guideSilhouette.style.top = '-4%';
+            guideSilhouette.style.left = '3%';
+            guideSilhouette.style.width = '94%';
+            guideSilhouette.style.height = '106%';
         }
         document.querySelector('.guide-instruction').style.display = 'block';
     } else {
