@@ -1037,6 +1037,10 @@ function updateCanvasDimensions() {
         oval.style.display = 'none';
         eyeLine.style.display = 'none';
         chinLine.style.display = 'none';
+        
+        const cardOutline = document.getElementById('guideIdCardOutline');
+        const cardDetails = document.getElementById('guideIdCardDetails');
+
         if (guideSilhouette) {
             guideSilhouette.style.display = 'block';
             // Scale up the silhouette dramatically to fit the 4:3 canvas properly
@@ -1044,6 +1048,15 @@ function updateCanvasDimensions() {
             guideSilhouette.style.left = '3%';
             guideSilhouette.style.width = '94%';
             guideSilhouette.style.height = '106%';
+        }
+
+        // Show Cédula / ID card outline overlay only in "Selfie + Cédula" (reverso) side
+        if (activeSide === 'reverso') {
+            if (cardOutline) cardOutline.style.display = 'block';
+            if (cardDetails) cardDetails.style.display = 'block';
+        } else {
+            if (cardOutline) cardOutline.style.display = 'none';
+            if (cardDetails) cardDetails.style.display = 'none';
         }
         document.querySelector('.guide-instruction').style.display = 'block';
     } else {

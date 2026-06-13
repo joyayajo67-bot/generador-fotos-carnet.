@@ -179,6 +179,21 @@
                                           stroke="rgba(255, 255, 255, 0.65)" 
                                           stroke-width="1.2" 
                                           stroke-dasharray="2 1.5" />
+                                    <!-- Dotted rectangle guide for ID card positioning -->
+                                    <rect x="64" y="62" width="24" height="16" rx="2" ry="2" 
+                                          fill="none" 
+                                          stroke="rgba(255, 255, 255, 0.85)" 
+                                          stroke-width="1.2" 
+                                          stroke-dasharray="2 1.5" 
+                                          id="guideIdCardOutline" 
+                                          style="display: none;" />
+                                    <!-- Small ID Card graphic inside the rect helper -->
+                                    <path d="M 68 67 L 76 67 M 68 71 L 73 71 M 79 67 A 1.5 1.5 0 1 1 79 70 A 1.5 1.5 0 1 1 79 67" 
+                                          fill="none" 
+                                          stroke="rgba(255, 255, 255, 0.5)" 
+                                          stroke-width="0.8" 
+                                          id="guideIdCardDetails" 
+                                          style="display: none;" />
                                 </svg>
                             </div>
                             <div class="guide-instruction">Alinea los ojos y la barbilla aquí</div>
